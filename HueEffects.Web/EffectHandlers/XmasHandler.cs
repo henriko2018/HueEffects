@@ -11,10 +11,10 @@ namespace HueEffects.Web.EffectHandlers
 {
     public class XmasHandler : EffectHandler
     {
-        private readonly XmasEffect _configuration;
+        private readonly XmasEffectConfig _configuration;
         private readonly ILogger<XmasHandler> _logger;
 
-        public XmasHandler(XmasEffect configuration, ILoggerFactory loggerFactory, ILocalHueClient hueClient)  : base(hueClient)
+        public XmasHandler(XmasEffectConfig configuration, ILoggerFactory loggerFactory, ILocalHueClient hueClient)  : base(hueClient, loggerFactory)
         {
             _configuration = configuration;
             _logger = loggerFactory.CreateLogger<XmasHandler>();
@@ -41,9 +41,6 @@ namespace HueEffects.Web.EffectHandlers
                 const float maxCt = 454;
                 const float minCt = 153;
                 const float timeInterval = 1; // seconds
-
-                // Calculate time between each step. We want to go from min to max in half the cycle length.
-                //var msDelta = 1000 * _configuration.CycleLength / 2 / (minSat - maxSat);
 
                 // Calculate step if we update once per time-interval.
                 var noSteps = _configuration.CycleLength / timeInterval / 2; // Number of steps up or down
@@ -129,27 +126,6 @@ namespace HueEffects.Web.EffectHandlers
             _logger.LogDebug("Setting saturation to {sat} for light(s) {lights}...", sat, string.Join(',', lightIds));
             var command = new LightCommand {Saturation = sat};
             await HueClient.SendCommandAsync(command, lightIds);
-        }
-
-        private async Task UpdateColorTemp(int ct, IReadOnlyCollection<string> lightIds)
-        {
-            _logger.LogDebug("Setting color temp to {ct} for lights {lights}...", ct, string.Join(',', lightIds));
-            var command = new LightCommand { ColorTemperature = ct};
-            await HueClient.SendCommandAsync(command, lightIds);
-        }
-
-        private async Task<List<string>> GetLightsWithCapability(string groupId, Func<LightCapabilities, bool> condition)
-        {
-            var lights = new List<string>();
-            var group = await HueClient.GetGroupAsync(_configuration.LightGroup);
-            foreach (var lightId in group.Lights)
-            {
-                var light = await HueClient.GetLightAsync(lightId);
-                if (condition(light.Capabilities))
-                    lights.Add(light.Id);
-            }
-
-            return lights;
         }
     }
 }

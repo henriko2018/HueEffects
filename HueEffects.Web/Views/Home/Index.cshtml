@@ -1,68 +1,106 @@
-﻿@using System.Linq
-@model Effects
+﻿@model EffectsConfig
 @{
     ViewData["Title"] = "Effekter";
 }
 <h1 class="display-1">@ViewData["Title"]</h1>
 <div class="row">
-    <div class="col-md-6">
-        <h2 class="display-4">Uppvärmning</h2>
-        <form method="post" asp-action="UseWarmupEffect">
-            <div class="form-group">
-                <div class="custom-control custom-switch">
-                    <input asp-for="WarmupEffect.Active" type="checkbox" disabled class="custom-control-input">
-                    <label class="custom-control-label" asp-for="WarmupEffect.Active">@(Model.WarmupEffect.Active ? "Aktiv" : "Inaktiv")</label>
-                </div>
-            </div>
-            <div class="form-group">
-                <label asp-for="WarmupEffect.LightGroup">Grupp</label>
-                <select asp-for="WarmupEffect.LightGroup" asp-items="Model.LightGroups.Select(lg => new SelectListItem(lg.Name, lg.Id))" class="form-control"></select>
-            </div>
-            <div class="form-group">
-                <label asp-for="WarmupEffect.TurnOnAt">Sätt på</label>
-                <input asp-for="WarmupEffect.TurnOnAt" type="time" disabled="disabled" class="form-control" />
-            </div>
-            <div class="form-group">
-                <label asp-for="WarmupEffect.WarmUp">Uppvärmningsperiod</label>
-                <input asp-for="WarmupEffect.WarmUp" type="time" class="form-control" />
-            </div>
-            <div class="form-group">
-                <label asp-for="WarmupEffect.CoolDown">Avkylningsperiod</label>
-                <input asp-for="WarmupEffect.CoolDown" type="time" class="form-control" />
-            </div>
-            <div class="form-group">
-                <label asp-for="WarmupEffect.TurnOffAt">Stäng av</label>
-                <input asp-for="WarmupEffect.TurnOffAt" type="time" disabled="disabled" class="form-control" />
-            </div>
-            <div class="form-group">
-                <label asp-for="WarmupEffect.UseMinTemp">Lägsta temperatur</label>
-                <input asp-for="WarmupEffect.UseMinTemp" class="form-control" min="@WarmupEffect.MinTemp" max="@WarmupEffect.MaxTemp" step="1" />
-            </div>
-            <div class="form-group">
-                <label asp-for="WarmupEffect.UseMaxTemp">Högsta temperatur</label>
-                <input asp-for="WarmupEffect.UseMaxTemp" class="form-control" min="@WarmupEffect.MinTemp" max="@WarmupEffect.MaxTemp" step="1" />
-            </div>
-            <button type="submit" class="btn btn-primary">Aktivera</button>
-        </form>
-    </div>
+    
     <div class="col-md-6">
         <h2 class="display-4">Jul</h2>
         <form method="post" asp-action="UseXmasEffect">
             <div class="form-group">
                 <div class="custom-control custom-switch">
-                    <input asp-for="XmasEffect.Active" type="checkbox" disabled class="custom-control-input">
-                    <label class="custom-control-label" asp-for="XmasEffect.Active">@(Model.XmasEffect.Active ? "Aktiv" : "Inaktiv")</label>
+                    <input asp-for="XmasEffectConfig.Active" type="checkbox" disabled class="custom-control-input">
+                    <label class="custom-control-label" asp-for="XmasEffectConfig.Active">@(Model.XmasEffectConfig.Active ? "Aktiv" : "Inaktiv")</label>
                 </div>
             </div>
             <div class="form-group">
-                <label asp-for="XmasEffect.LightGroup">Grupp</label>
-                <select asp-for="XmasEffect.LightGroup" asp-items="Model.LightGroups.Select(lg => new SelectListItem(lg.Name, lg.Id))" class="form-control"></select>
+                <label asp-for="XmasEffectConfig.LightGroup">Grupp</label>
+                <select asp-for="XmasEffectConfig.LightGroup" asp-items="Model.LightGroups.Select(lg => new SelectListItem(lg.Name, lg.Id))" class="form-control"></select>
             </div>
             <div class="form-group">
-                <label asp-for="XmasEffect.CycleLength">Cykellängd (sekunder)</label>
-                <input asp-for="XmasEffect.CycleLength" type="number" class="form-control" />
+                <label asp-for="XmasEffectConfig.CycleLength">Cykellängd (sekunder)</label>
+                <input asp-for="XmasEffectConfig.CycleLength" type="number" class="form-control" />
             </div>
             <button type="submit" class="btn btn-primary">Aktivera</button>
+        </form>
+    </div>
+
+    <div class="col-md-6">
+        <h2 class="display-4">Uppvärmning</h2>
+        <form method="post" asp-action="UseWarmupEffect">
+            <div class="form-group">
+                <div class="custom-control custom-switch">
+                    <input asp-for="WarmupEffectConfig.Active" type="checkbox" disabled class="custom-control-input">
+                    <label class="custom-control-label" asp-for="WarmupEffectConfig.Active">@(Model.WarmupEffectConfig.Active ? "Aktiv" : "Inaktiv")</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label asp-for="WarmupEffectConfig.LightGroup">Grupp</label>
+                <select asp-for="WarmupEffectConfig.LightGroup" asp-items="Model.LightGroups.Select(lg => new SelectListItem(lg.Name, lg.Id))" class="form-control"></select>
+            </div>
+            <fieldset class="form-group">
+                <legend>Sätt på</legend>
+                <div class="form-group">
+                    <div class="form-check">
+                        <input asp-for="WarmupEffectConfig.TurnOnAt.Type" type="radio" value="@TimeType.Sun" class="form-check-input" onclick="$('#WarmupEffectConfig_TurnOnAt_FixedTime').prop('readonly', true);"/>
+                        <label class="form-check-label">@($"vid solnedgång ({Model.WarmupEffectConfig.TurnOnAt.SunTime:t})")</label>
+                    </div>
+                    <div class="form-check">
+                        <input asp-for="WarmupEffectConfig.TurnOnAt.Type" type="radio" value="@TimeType.Fixed" class="form-check-input" onclick="$('#WarmupEffectConfig_TurnOnAt_FixedTime').prop('readonly', false);"/>
+                        <label class="form-check-label">vid fast tid</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label asp-for="WarmupEffectConfig.TurnOnAt.FixedTime">Fast tid</label>
+                    <input asp-for="WarmupEffectConfig.TurnOnAt.FixedTime" type="time" readonly="@(Model.WarmupEffectConfig.TurnOnAt.Type == TimeType.Sun)" class="form-control"/>
+                </div>
+                <div class="form-group">
+                    <label asp-for="WarmupEffectConfig.TurnOnAt.RandomInterval">+/- slumpmässig tidsförskjutning max (minuter)</label>
+                    <input asp-for="WarmupEffectConfig.TurnOnAt.RandomInterval" class="form-control" min="0"/>
+                </div>
+                <div class="form-group">
+                    <label asp-for="WarmupEffectConfig.TurnOnAt.TransitionTime">Uppvärmningsperiod</label>
+                    <input asp-for="WarmupEffectConfig.TurnOnAt.TransitionTime" type="time" class="form-control"/>
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>Stäng av</legend>
+                <div class="form-group">
+                    <div class="form-check">
+                        <input asp-for="WarmupEffectConfig.TurnOffAt.Type" type="radio" value="@TimeType.Sun" class="form-check-input" onclick="$('#WarmupEffectConfig_TurnOffAt_FixedTime').prop('readonly', true);" />
+                        <label class="form-check-label">@($"vid soluppgång ({Model.WarmupEffectConfig.TurnOffAt.SunTime:t})")</label>
+                    </div>
+                    <div class="form-check">
+                        <input asp-for="WarmupEffectConfig.TurnOffAt.Type" type="radio" value="@TimeType.Fixed" class="form-check-input" onclick="$('#WarmupEffectConfig_TurnOffAt_FixedTime').prop('readonly', false);" />
+                        <label class="form-check-label">vid fast tid</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label asp-for="WarmupEffectConfig.TurnOffAt.FixedTime">Fast tid</label>
+                    <input asp-for="WarmupEffectConfig.TurnOffAt.FixedTime" type="time" readonly="@(Model.WarmupEffectConfig.TurnOffAt.Type == TimeType.Sun)" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label asp-for="WarmupEffectConfig.TurnOffAt.RandomInterval">+/- slumpmässig tidsförskjutning max (minuter)</label>
+                    <input asp-for="WarmupEffectConfig.TurnOffAt.RandomInterval" class="form-control" min="0" />
+                </div>
+                <div class="form-group">
+                    <label asp-for="WarmupEffectConfig.TurnOffAt.TransitionTime">Avkylningsperiod</label>
+                    <input asp-for="WarmupEffectConfig.TurnOffAt.TransitionTime" type="time" class="form-control" />
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>Färgtemperatur</legend>
+                <div class="form-group">
+                    <label asp-for="WarmupEffectConfig.UseMinTemp">Lägsta temperatur</label>
+                    <input asp-for="WarmupEffectConfig.UseMinTemp" class="form-control" min="@WarmupEffectConfig.MinTemp" max="@WarmupEffectConfig.MaxTemp" step="1"/>
+                </div>
+                <div class="form-group">
+                    <label asp-for="WarmupEffectConfig.UseMaxTemp">Högsta temperatur</label>
+                    <input asp-for="WarmupEffectConfig.UseMaxTemp" class="form-control" min="@WarmupEffectConfig.MinTemp" max="@WarmupEffectConfig.MaxTemp" step="1"/>
+                </div>
+                <button type="submit" class="btn btn-primary">Aktivera</button>
+            </fieldset>
         </form>
     </div>
 </div>

@@ -38,41 +38,38 @@ namespace HueEffects.Web.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var (sunSet, sunRise) = GetSunPhases();
-            var model = new Effects
+            var model = new EffectsConfig
             {
                 LightGroups = await _hueClient.GetGroupsAsync(),
-                XmasEffect = new XmasEffect {Active = false, CycleLength = 60},
-                WarmupEffect = new WarmupEffect
-                {
-                    Active = false, TurnOnAt = sunSet, WarmUp = new TimeSpan(0, 2, 0, 0),
-                    CoolDown = new TimeSpan(0, 2, 0, 0), TurnOffAt = sunRise,
-                    UseMinTemp = WarmupEffect.MinTemp,
-                    UseMaxTemp = WarmupEffect.MaxTemp
-                }
+                XmasEffectConfig = new XmasEffectConfig(),
+                WarmupEffectConfig = new WarmupEffectConfig()
             };
             _cache.TryGetValue(ActiveHandlerKey, out EffectHandler activeHandler);
-            model.XmasEffect.Active = activeHandler != null && activeHandler.GetType() == typeof(XmasHandler);
-            model.WarmupEffect.Active = activeHandler != null && activeHandler.GetType() == typeof(WarmupHandler);
+            model.XmasEffectConfig.Active = activeHandler != null && activeHandler.GetType() == typeof(XmasHandler);
+            model.WarmupEffectConfig.Active = activeHandler != null && activeHandler.GetType() == typeof(WarmupHandler);
 
             return View(model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UseXmasEffect(Effects config)
+        public async Task<IActionResult> UseXmasEffect(EffectsConfig config)
         {
             if (ModelState.IsValid)
-                return await UseEffect(config, new XmasHandler(config.XmasEffect, _loggerFactory, _hueClient));
+                return await UseEffect(config, new XmasHandler(config.XmasEffectConfig, _loggerFactory, _hueClient));
             return View("Index", config);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UseWarmupEffect(Effects config)
+        public async Task<IActionResult> UseWarmupEffect(EffectsConfig config)
         {
             if (ModelState.IsValid)
-                return await UseEffect(config, new WarmupHandler(config.WarmupEffect, _loggerFactory, _hueClient));
+            {
+                return await UseEffect(config,
+                    new WarmupHandler(config.WarmupEffectConfig, _loggerFactory, _hueClient));
+            }
+
             return View("Index", config);
         }
 
@@ -91,15 +88,7 @@ namespace HueEffects.Web.Controllers
 
         #region Private methods
 
-        private static (DateTime sunSet, DateTime sunRise) GetSunPhases()
-        {
-            var sunPhases = SunCalc.GetSunPhases(DateTime.Now, 59.4664329, 18.0842061).ToList();
-            var sunSet = sunPhases.Single(sp => sp.Name.Value == SunPhaseName.Sunset.Value).PhaseTime.ToLocalTime();
-            var sunRise = sunPhases.Single(sp => sp.Name.Value == SunPhaseName.Sunrise.Value).PhaseTime.ToLocalTime();
-            return (sunSet, sunRise);
-        }
-
-        private async Task<IActionResult> UseEffect(Effects config, EffectHandler handler)
+        private async Task<IActionResult> UseEffect(EffectsConfig config, EffectHandler handler)
         {
             await SaveConfig(config);
 
@@ -112,19 +101,19 @@ namespace HueEffects.Web.Controllers
             return RedirectToAction("Index");
         }
 
-        private async Task<Effects> SaveConfig(Effects newConfig)
+        private async Task<EffectsConfig> SaveConfig(EffectsConfig newConfig)
         {
-            var oldConfig = new Effects();
+            var oldConfig = new EffectsConfig();
             var path = Path.Combine(_environment.ContentRootPath, "EffectsConfig.json");
             if (System.IO.File.Exists(path))
             {
                 var s = await System.IO.File.ReadAllTextAsync(path);
-                oldConfig = JsonConvert.DeserializeObject<Effects>(s);
+                oldConfig = JsonConvert.DeserializeObject<EffectsConfig>(s);
             }
-            if (newConfig.WarmupEffect != null)
-                oldConfig.WarmupEffect = newConfig.WarmupEffect;
-            if (newConfig.XmasEffect != null)
-                oldConfig.XmasEffect = newConfig.XmasEffect;
+            if (newConfig.WarmupEffectConfig != null)
+                oldConfig.WarmupEffectConfig = newConfig.WarmupEffectConfig;
+            if (newConfig.XmasEffectConfig != null)
+                oldConfig.XmasEffectConfig = newConfig.XmasEffectConfig;
             await System.IO.File.WriteAllTextAsync(path, JsonConvert.SerializeObject(oldConfig));
             return newConfig;
         }
