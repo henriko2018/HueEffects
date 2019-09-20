@@ -38,6 +38,7 @@ namespace HueEffects.Web.Controllers
 
         public async Task<IActionResult> Index()
         {
+            // TODO: Read from config file
             var model = new EffectsConfig
             {
                 LightGroups = await _hueClient.GetGroupsAsync(),
