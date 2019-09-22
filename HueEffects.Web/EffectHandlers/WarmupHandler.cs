@@ -33,13 +33,12 @@ namespace HueEffects.Web.EffectHandlers
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Exception caught in DoWork()");
+				_logger.LogError(ex, "Exception caught in " + nameof(DoWork));
 			}
         }
 
-        public override void Stop()
+        private void StopTimers()
         {
-            base.Stop();
             foreach (var timer in _timers)
             {
                 timer.Stop();
@@ -57,9 +56,15 @@ namespace HueEffects.Web.EffectHandlers
             _logger.LogDebug($"On timer will fire at {DateTime.Now.AddMilliseconds(timer.Interval)}.");
         }
 
-        private void OnTimer_Elapsed(object sender, ElapsedEventArgs e)
+        private async void OnTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
-			// Turn on first
+            if (_cancellationToken.IsCancellationRequested)
+            {
+                StopTimers();
+                return;
+            }
+
+            // Turn on first
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 			SwitchOn(_lightIds, _config.UseMinTemp);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -67,9 +72,9 @@ namespace HueEffects.Web.EffectHandlers
 			// Warm up
 			// Calculate time between each step. We want to go from min to max during configured warm-up.
 			var msDelta = (int) (_config.TurnOnAt.TransitionTime.TotalMilliseconds / (_config.UseMaxTemp - _config.UseMinTemp));
-            for (var temp = _config.UseMinTemp; temp <= _config.UseMaxTemp && !StopFlag; temp++)
+            for (var temp = _config.UseMinTemp; temp <= _config.UseMaxTemp && !_cancellationToken.IsCancellationRequested; temp++)
             {
-                Thread.Sleep(msDelta);
+                await Task.Delay(msDelta, _cancellationToken);
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 				UpdateColorTemp(temp, _lightIds);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -86,15 +91,20 @@ namespace HueEffects.Web.EffectHandlers
             _logger.LogDebug($"Off timer will fire at {DateTime.Now.AddMilliseconds(timer.Interval)}.");
         }
 
-        private void OffTimer_Elapsed(object sender, ElapsedEventArgs e)
+        private async void OffTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
+            if (_cancellationToken.IsCancellationRequested)
+            {
+                StopTimers();
+                return;
+            }
+
             // Cool down
             // Calculate time between each step. We want to go from max to min during configured cool-down.
             var msDelta = (int) (_config.TurnOffAt.TransitionTime.TotalMilliseconds / (_config.UseMaxTemp - _config.UseMinTemp));
-            for (var temp = _config.UseMaxTemp; temp >= _config.UseMinTemp; temp--)
+            for (var temp = _config.UseMaxTemp; temp >= _config.UseMinTemp && !_cancellationToken.IsCancellationRequested; temp--)
             {
-                if (StopFlag) return;
-                Thread.Sleep(msDelta);
+                await Task.Delay(msDelta, _cancellationToken);
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 				UpdateColorTemp(temp, _lightIds);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
