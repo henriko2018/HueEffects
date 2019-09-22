@@ -24,7 +24,7 @@ namespace HueEffects.Web.EffectHandlers
         public void Start()
         {
 #pragma warning disable 4014
-            _thread = new Thread(() => DoWork()) { IsBackground = true, Name = nameof(XmasHandler) };
+            _thread = new Thread(() => DoWork()) { IsBackground = true, Name = nameof(EffectHandler) };
 #pragma warning restore 4014
             _thread.Start();
         }
@@ -36,7 +36,21 @@ namespace HueEffects.Web.EffectHandlers
 
         protected abstract Task DoWork();
 
-        protected async Task UpdateColorTemp(int ct, IReadOnlyCollection<string> lightIds)
+		protected async Task SwitchOn(IReadOnlyCollection<string> lightIds, int? colorTemp = null)
+		{
+			_logger.LogDebug("Switching on light(s) {lights}...", string.Join(',', lightIds));
+			var command = new LightCommand { On = true, ColorTemperature = colorTemp };
+			await HueClient.SendCommandAsync(command, lightIds);
+		}
+
+		protected async Task SwitchOff(List<string> lightIds)
+		{
+			_logger.LogDebug("Switching off light(s) {lights}...", string.Join(',', lightIds));
+			var command = new LightCommand { On = false };
+			await HueClient.SendCommandAsync(command, lightIds);
+		}
+
+		protected async Task UpdateColorTemp(int ct, IReadOnlyCollection<string> lightIds)
         {
             _logger.LogDebug("Setting color temp to {ct} for lights {lights}...", ct, string.Join(',', lightIds));
             var command = new LightCommand { ColorTemperature = ct};

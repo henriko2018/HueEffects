@@ -31,11 +31,12 @@ namespace HueEffects.Web
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
 
-
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
             
             AddPhilipsHueClient(services);
-            services.AddHostedService<BackgroundService>();
+			//services.AddHostedService<BackgroundService>(); // Doesn't work - see https://github.com/aspnet/Extensions/issues/553
+			services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService, BackgroundService>();
+			services.AddSingleton<StorageService>();
         }
 
         private void AddPhilipsHueClient(IServiceCollection services)

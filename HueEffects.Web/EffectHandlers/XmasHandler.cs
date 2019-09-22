@@ -47,73 +47,66 @@ namespace HueEffects.Web.EffectHandlers
                 var satStep = (maxSat - minSat) / noSteps;
                 var ctStep = (maxCt - minCt) / noSteps;
 
-                while (true)
+                while (!StopFlag)
                 {
                     var sat = minSat;
                     var ct = minCt;
                     var intSat = 0; // This is the one we'll send to Hue later.
                     var intCt = 0;
 
-                    void UpdateAndWait()
-                    {
-                        var startTime = DateTime.Now;
-
-                        // Send new value only if it has changed
-                        if ((int) sat != intSat)
-                        {
-                            intSat = (int) sat;
-#pragma warning disable 4014
-                            UpdateSaturation(intSat, colorLights);
-#pragma warning restore 4014
-                        }
-
-                        if ((int) ct != intCt)
-                        {
-                            intCt = (int) ct;
-#pragma warning disable 4014
-                            UpdateColorTemp(intCt, ambianceLights);
-#pragma warning restore 4014
-                        }
-
-                        var timeToWait = startTime.AddSeconds(timeInterval) - DateTime.Now;
-                        Thread.Sleep(timeToWait); // TODO: Cancel while sleeping?
-                    }
-
-
                     // Start at minSat, i.e. white, and go towards maxSat, i.e. red (higher value).
                     // For ambiance lights, we go from minCt, i.e. cold, to maxCt, i.e. warm (higher value).
-                    for (var i = 0; i < noSteps; i++)
+                    for (var i = 0; i < noSteps && !StopFlag; i++)
                     {
-                        if (StopFlag) return;
-                        UpdateAndWait();
+                        UpdateAndWait(colorLights, ambianceLights, sat, ct, ref intSat, ref intCt, timeInterval);
                         sat += satStep;
                         ct += ctStep;
                     }
 
                     // Go the opposite direction, i.e. from red (maxSat) to white (minSat) (lower value).
-                    for (var i = 0; i < noSteps; i++)
+                    for (var i = 0; i < noSteps && !StopFlag; i++)
                     {
-                        if (StopFlag) return;
-                        UpdateAndWait();
+                        UpdateAndWait(colorLights, ambianceLights, sat, ct, ref intSat, ref intCt, timeInterval);
                         sat -= satStep;
                         ct -= ctStep;
                     }
                 }
-            }
+
+				await SwitchOff(colorLights);
+				await SwitchOff(ambianceLights);
+			}
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Exception caught in " + nameof(DoWork));
             }
         }
 
-        private async Task SwitchOn(IReadOnlyCollection<string> lightIds)
-        {
-            _logger.LogDebug("Switching on light(s) {lights}...", string.Join(',', lightIds));
-            var command = new LightCommand { On = true };
-            await HueClient.SendCommandAsync(command, lightIds);
-        }
+		private void UpdateAndWait(List<string> colorLights, List<string> ambianceLights, float sat, float ct, ref int intSat, ref int intCt, float timeInterval)
+		{
+			var startTime = DateTime.Now;
 
-        private async Task SetColorRed(IReadOnlyCollection<string> lightIds)
+			// Send new value only if it has changed
+			if ((int)sat != intSat)
+			{
+				intSat = (int)sat;
+#pragma warning disable 4014
+				UpdateSaturation(intSat, colorLights);
+#pragma warning restore 4014
+			}
+
+			if ((int)ct != intCt)
+			{
+				intCt = (int)ct;
+#pragma warning disable 4014
+				UpdateColorTemp(intCt, ambianceLights);
+#pragma warning restore 4014
+			}
+
+			var timeToWait = startTime.AddSeconds(timeInterval) - DateTime.Now;
+			Thread.Sleep(timeToWait); // TODO: Cancel while sleeping?
+		}
+
+		private async Task SetColorRed(IReadOnlyCollection<string> lightIds)
         {
             _logger.LogDebug("Setting color to red for light(s) {lights}...", string.Join(',', lightIds));
             // "xy":[0.675,0.322]is red.

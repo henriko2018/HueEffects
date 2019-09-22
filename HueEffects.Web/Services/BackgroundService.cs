@@ -1,18 +1,22 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using HueEffects.Web.EffectHandlers;
-using HueEffects.Web.Models;
 using Microsoft.Extensions.Logging;
 
 namespace HueEffects.Web.Services
 {
-    public class BackgroundService : Microsoft.Extensions.Hosting.BackgroundService
+	public class BackgroundService : Microsoft.Extensions.Hosting.BackgroundService
     {
         private readonly ILogger<BackgroundService> _logger;
+		private readonly StorageService _storageService;
 
-        public BackgroundService(ILogger<BackgroundService> logger)
+		public EffectHandler ActiveHandler { get; private set; }
+
+		public BackgroundService(ILogger<BackgroundService> logger, StorageService storageService)
         {
             _logger = logger;
+			_storageService = storageService;
+			_logger.LogDebug("ctor");
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -25,15 +29,24 @@ namespace HueEffects.Web.Services
             catch (TaskCanceledException)
             {
                 _logger.LogInformation("Received stop signal.");
-                // TODO: Stop handler
+				ActiveHandler.Stop();
                 _logger.LogInformation("Finished cleaning up.");
             }
         }
 
-        public Task StartEffect(EffectsConfig config, EffectHandler handler)
+        public async Task StartEffect<TConfig>(TConfig config, EffectHandler handler)
         {
-            // TODO: Move code from HomeController.UseEffect.
-            return Task.CompletedTask;
-        }
-    }
+			await _storageService.SaveConfig(config);
+
+			// Stop previous handler if there is one
+			if (ActiveHandler != null)
+			{
+				ActiveHandler.Stop();
+				ActiveHandler = null;
+			}
+
+			handler.Start();
+			ActiveHandler = handler;
+		}
+	}
 }
