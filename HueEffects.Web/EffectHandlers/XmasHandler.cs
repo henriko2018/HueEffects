@@ -32,7 +32,7 @@ namespace HueEffects.Web.EffectHandlers
 
                 await SwitchOn(colorLights);
                 await SwitchOn(ambianceLights);
-                await SetColorRed(colorLights); // TODO: Add cancellation token?
+                await SetColorRed(colorLights);
 
                 // Documentation says "sat:25 always gives the most saturated colors and reducing it to sat:200 makes them less intense and more white"
                 // but it is the other way around.
@@ -47,26 +47,24 @@ namespace HueEffects.Web.EffectHandlers
                 var satStep = (maxSat - minSat) / noSteps;
                 var ctStep = (maxCt - minCt) / noSteps;
 
-                while (!StopFlag)
+                while (!_cancellationToken.IsCancellationRequested)
                 {
                     var sat = minSat;
                     var ct = minCt;
-                    var intSat = 0; // This is the one we'll send to Hue later.
-                    var intCt = 0;
 
                     // Start at minSat, i.e. white, and go towards maxSat, i.e. red (higher value).
                     // For ambiance lights, we go from minCt, i.e. cold, to maxCt, i.e. warm (higher value).
-                    for (var i = 0; i < noSteps && !StopFlag; i++)
+                    for (var i = 0; i < noSteps && !_cancellationToken.IsCancellationRequested; i++)
                     {
-                        UpdateAndWait(colorLights, ambianceLights, sat, ct, ref intSat, ref intCt, timeInterval);
+                        await UpdateAndWait(colorLights, ambianceLights, sat, ct, timeInterval, _cancellationToken);
                         sat += satStep;
                         ct += ctStep;
                     }
 
                     // Go the opposite direction, i.e. from red (maxSat) to white (minSat) (lower value).
-                    for (var i = 0; i < noSteps && !StopFlag; i++)
+                    for (var i = 0; i < noSteps && !_cancellationToken.IsCancellationRequested; i++)
                     {
-                        UpdateAndWait(colorLights, ambianceLights, sat, ct, ref intSat, ref intCt, timeInterval);
+                        await UpdateAndWait(colorLights, ambianceLights, sat, ct, timeInterval, _cancellationToken);
                         sat -= satStep;
                         ct -= ctStep;
                     }
@@ -81,30 +79,18 @@ namespace HueEffects.Web.EffectHandlers
             }
         }
 
-		private void UpdateAndWait(List<string> colorLights, List<string> ambianceLights, float sat, float ct, ref int intSat, ref int intCt, float timeInterval)
+		private async Task UpdateAndWait(IReadOnlyCollection<string> colorLights, IReadOnlyCollection<string> ambianceLights, float sat, float ct, float timeInterval, CancellationToken cancellationToken)
 		{
 			var startTime = DateTime.Now;
 
-			// Send new value only if it has changed
-			if ((int)sat != intSat)
-			{
-				intSat = (int)sat;
 #pragma warning disable 4014
-				UpdateSaturation(intSat, colorLights);
+			UpdateSaturation((int) sat, colorLights);
+			UpdateColorTemp((int) ct, ambianceLights);
 #pragma warning restore 4014
-			}
-
-			if ((int)ct != intCt)
-			{
-				intCt = (int)ct;
-#pragma warning disable 4014
-				UpdateColorTemp(intCt, ambianceLights);
-#pragma warning restore 4014
-			}
 
 			var timeToWait = startTime.AddSeconds(timeInterval) - DateTime.Now;
-			Thread.Sleep(timeToWait); // TODO: Cancel while sleeping?
-		}
+            await Task.Delay(timeToWait, cancellationToken);
+        }
 
 		private async Task SetColorRed(IReadOnlyCollection<string> lightIds)
         {

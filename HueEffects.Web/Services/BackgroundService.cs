@@ -9,6 +9,7 @@ namespace HueEffects.Web.Services
     {
         private readonly ILogger<BackgroundService> _logger;
 		private readonly StorageService _storageService;
+        private CancellationTokenSource _effectCancellationTokenSource;
 
 		public EffectHandler ActiveHandler { get; private set; }
 
@@ -21,16 +22,17 @@ namespace HueEffects.Web.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Started and waiting for cancellation.");
             try
             {
-                await Task.Delay(-1, stoppingToken);
+                _logger.LogInformation("Started and waiting for stop signal.");
+				await Task.Delay(-1, stoppingToken);
             }
             catch (TaskCanceledException)
             {
                 _logger.LogInformation("Received stop signal.");
-				ActiveHandler.Stop();
-                _logger.LogInformation("Finished cleaning up.");
+                // Cancel effect handler if there is one.
+                _effectCancellationTokenSource?.Cancel();
+				_logger.LogInformation("Finished cleaning up.");
             }
         }
 
@@ -38,15 +40,13 @@ namespace HueEffects.Web.Services
         {
 			await _storageService.SaveConfig(config);
 
-			// Stop previous handler if there is one
-			if (ActiveHandler != null)
-			{
-				ActiveHandler.Stop();
-				ActiveHandler = null;
-			}
+			// Cancel previous handler if there is one
+			_effectCancellationTokenSource?.Cancel();
 
-			handler.Start();
-			ActiveHandler = handler;
-		}
+			// Start the new handler
+			_effectCancellationTokenSource = new CancellationTokenSource();
+			handler.Start(_effectCancellationTokenSource.Token);
+            ActiveHandler = handler;
+        }
 	}
 }
