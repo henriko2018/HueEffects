@@ -13,7 +13,7 @@ namespace HueEffects.Web.EffectHandlers
         protected readonly ILocalHueClient HueClient;
         private Thread _thread;
         private readonly ILogger _logger;
-        protected CancellationToken _cancellationToken;
+        protected CancellationToken CancellationToken { get; private set; }
 
         protected EffectHandler(ILocalHueClient hueClient, ILoggerFactory loggerFactory)
         {
@@ -23,7 +23,7 @@ namespace HueEffects.Web.EffectHandlers
 
         public void Start(CancellationToken cancellationToken)
         {
-            _cancellationToken = cancellationToken;
+            CancellationToken = cancellationToken;
 #pragma warning disable 4014
             _thread = new Thread(() => DoWork()) { IsBackground = true, Name = nameof(EffectHandler) };
 #pragma warning restore 4014

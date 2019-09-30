@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HueEffects.Web.Models;
@@ -26,9 +27,8 @@ namespace HueEffects.Web.EffectHandlers
             {
                 var colorLights = await GetLightsWithCapability(_configuration.LightGroup,
                     capabilities => capabilities.Control.ColorGamut != null);
-                var ambianceLights = await GetLightsWithCapability(_configuration.LightGroup,
-                    capabilities =>
-                        capabilities.Control.ColorGamut == null && capabilities.Control.ColorTemperature != null);
+                var ambianceLights = (await GetLightsWithCapability(_configuration.LightGroup,
+                    capabilities => capabilities.Control.ColorTemperature != null)).Except(colorLights).ToList();
 
                 await SwitchOn(colorLights);
                 await SwitchOn(ambianceLights);
@@ -47,32 +47,36 @@ namespace HueEffects.Web.EffectHandlers
                 var satStep = (maxSat - minSat) / noSteps;
                 var ctStep = (maxCt - minCt) / noSteps;
 
-                while (!_cancellationToken.IsCancellationRequested)
+                while (!CancellationToken.IsCancellationRequested)
                 {
                     var sat = minSat;
                     var ct = minCt;
 
                     // Start at minSat, i.e. white, and go towards maxSat, i.e. red (higher value).
                     // For ambiance lights, we go from minCt, i.e. cold, to maxCt, i.e. warm (higher value).
-                    for (var i = 0; i < noSteps && !_cancellationToken.IsCancellationRequested; i++)
+                    for (var i = 0; i < noSteps && !CancellationToken.IsCancellationRequested; i++)
                     {
-                        await UpdateAndWait(colorLights, ambianceLights, sat, ct, timeInterval, _cancellationToken);
+                        await UpdateAndWait(colorLights, ambianceLights, sat, ct, timeInterval, CancellationToken);
                         sat += satStep;
                         ct += ctStep;
                     }
 
                     // Go the opposite direction, i.e. from red (maxSat) to white (minSat) (lower value).
-                    for (var i = 0; i < noSteps && !_cancellationToken.IsCancellationRequested; i++)
+                    for (var i = 0; i < noSteps && !CancellationToken.IsCancellationRequested; i++)
                     {
-                        await UpdateAndWait(colorLights, ambianceLights, sat, ct, timeInterval, _cancellationToken);
+                        await UpdateAndWait(colorLights, ambianceLights, sat, ct, timeInterval, CancellationToken);
                         sat -= satStep;
                         ct -= ctStep;
                     }
                 }
 
-				await SwitchOff(colorLights);
-				await SwitchOff(ambianceLights);
-			}
+                await SwitchOff(colorLights);
+                await SwitchOff(ambianceLights);
+            }
+            catch (TaskCanceledException)
+            {
+                _logger.LogInformation("Canceled.");
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Exception caught in " + nameof(DoWork));

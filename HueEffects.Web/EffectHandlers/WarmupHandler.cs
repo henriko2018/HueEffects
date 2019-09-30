@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Timers;
 using System.Threading.Tasks;
 using HueEffects.Web.Models;
 using Microsoft.Extensions.Logging;
 using Q42.HueApi.Interfaces;
-using Timer = System.Timers.Timer;
 
 namespace HueEffects.Web.EffectHandlers
 {
-    public class WarmupHandler : EffectHandler
+    public class WarmupHandler : EffectHandler, IDisposable
     {
         private readonly WarmupEffectConfig _config;
         private readonly ILogger<WarmupHandler> _logger;
@@ -36,12 +34,18 @@ namespace HueEffects.Web.EffectHandlers
 				_logger.LogError(ex, "Exception caught in " + nameof(DoWork));
 			}
         }
+        
+        public void Dispose()
+        {
+            StopTimers();
+        }
 
         private void StopTimers()
         {
             foreach (var timer in _timers)
             {
                 timer.Stop();
+                _logger.LogInformation("Timer stopped.");
             }
             _timers.Clear();
         }
@@ -58,7 +62,7 @@ namespace HueEffects.Web.EffectHandlers
 
         private async void OnTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
-            if (_cancellationToken.IsCancellationRequested)
+            if (CancellationToken.IsCancellationRequested)
             {
                 StopTimers();
                 return;
@@ -72,9 +76,9 @@ namespace HueEffects.Web.EffectHandlers
 			// Warm up
 			// Calculate time between each step. We want to go from min to max during configured warm-up.
 			var msDelta = (int) (_config.TurnOnAt.TransitionTime.TotalMilliseconds / (_config.UseMaxTemp - _config.UseMinTemp));
-            for (var temp = _config.UseMinTemp; temp <= _config.UseMaxTemp && !_cancellationToken.IsCancellationRequested; temp++)
+            for (var temp = _config.UseMinTemp; temp <= _config.UseMaxTemp && !CancellationToken.IsCancellationRequested; temp++)
             {
-                await Task.Delay(msDelta, _cancellationToken);
+                await Task.Delay(msDelta, CancellationToken);
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 				UpdateColorTemp(temp, _lightIds);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -93,7 +97,7 @@ namespace HueEffects.Web.EffectHandlers
 
         private async void OffTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
-            if (_cancellationToken.IsCancellationRequested)
+            if (CancellationToken.IsCancellationRequested)
             {
                 StopTimers();
                 return;
@@ -102,9 +106,9 @@ namespace HueEffects.Web.EffectHandlers
             // Cool down
             // Calculate time between each step. We want to go from max to min during configured cool-down.
             var msDelta = (int) (_config.TurnOffAt.TransitionTime.TotalMilliseconds / (_config.UseMaxTemp - _config.UseMinTemp));
-            for (var temp = _config.UseMaxTemp; temp >= _config.UseMinTemp && !_cancellationToken.IsCancellationRequested; temp--)
+            for (var temp = _config.UseMaxTemp; temp >= _config.UseMinTemp && !CancellationToken.IsCancellationRequested; temp--)
             {
-                await Task.Delay(msDelta, _cancellationToken);
+                await Task.Delay(msDelta, CancellationToken);
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 				UpdateColorTemp(temp, _lightIds);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -119,5 +123,5 @@ namespace HueEffects.Web.EffectHandlers
 			AddTurnOnTimer();
 			AddTurnOffTimer();
 		}
-	}
+    }
 }
