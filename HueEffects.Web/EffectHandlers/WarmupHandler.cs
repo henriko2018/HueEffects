@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Timers;
 using System.Threading.Tasks;
 using HueEffects.Web.Models;
@@ -12,7 +13,7 @@ namespace HueEffects.Web.EffectHandlers
     {
         private readonly WarmupEffectConfig _config;
         private readonly ILogger<WarmupHandler> _logger;
-        private readonly List<Timer> _timers = new List<Timer>();
+        private readonly List<Timer> _timers = new List<Timer>(); // Timers must be referenced so that they are not garbage collected.
         private List<string> _lightIds;
 
         public WarmupHandler(WarmupEffectConfig config, ILoggerFactory loggerFactory, ILocalHueClient hueClient) : base(hueClient, loggerFactory)
@@ -24,8 +25,11 @@ namespace HueEffects.Web.EffectHandlers
         protected override async Task DoWork()
         {
 			try
-			{
-				_lightIds = await GetLightsWithCapability(_config.LightGroup, capabilities => capabilities.Control.ColorTemperature != null);
+            {
+                _lightIds = (await GetLights(_config.LightGroup))
+                    .Where(light => light.Capabilities.Control.ColorTemperature != null)
+                    .Select(light => light.Id)
+                    .ToList();
 				AddTurnOnTimer();
 				AddTurnOffTimer();
 			}

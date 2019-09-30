@@ -25,14 +25,15 @@ namespace HueEffects.Web.EffectHandlers
         {
             try
             {
-                var colorLights = await GetLightsWithCapability(_configuration.LightGroup,
-                    capabilities => capabilities.Control.ColorGamut != null);
-                var ambianceLights = (await GetLightsWithCapability(_configuration.LightGroup,
-                    capabilities => capabilities.Control.ColorTemperature != null)).Except(colorLights).ToList();
+                var lights = await GetLights(_configuration.LightGroup);
+                var colorLights = lights.Where(light => light.Capabilities.Control.ColorGamut != null).ToList();
+                var ambianceLights = lights.Where(light => light.Capabilities.Control.ColorTemperature != null).Except(colorLights).ToList();
+                var colorLightIds = colorLights.Select(l => l.Id).ToList();
+                var ambianceLightIds = ambianceLights.Select(l => l.Id).ToList();
 
-                await SwitchOn(colorLights);
-                await SwitchOn(ambianceLights);
-                await SetColorRed(colorLights);
+                await SwitchOn(colorLightIds);
+                await SwitchOn(ambianceLightIds);
+                await SetColorRed(colorLightIds);
 
                 // Documentation says "sat:25 always gives the most saturated colors and reducing it to sat:200 makes them less intense and more white"
                 // but it is the other way around.
@@ -47,35 +48,41 @@ namespace HueEffects.Web.EffectHandlers
                 var satStep = (maxSat - minSat) / noSteps;
                 var ctStep = (maxCt - minCt) / noSteps;
 
-                while (!CancellationToken.IsCancellationRequested)
+                try
                 {
-                    var sat = minSat;
-                    var ct = minCt;
-
-                    // Start at minSat, i.e. white, and go towards maxSat, i.e. red (higher value).
-                    // For ambiance lights, we go from minCt, i.e. cold, to maxCt, i.e. warm (higher value).
-                    for (var i = 0; i < noSteps && !CancellationToken.IsCancellationRequested; i++)
+                    while (!CancellationToken.IsCancellationRequested)
                     {
-                        await UpdateAndWait(colorLights, ambianceLights, sat, ct, timeInterval, CancellationToken);
-                        sat += satStep;
-                        ct += ctStep;
-                    }
+                        var sat = minSat;
+                        var ct = minCt;
 
-                    // Go the opposite direction, i.e. from red (maxSat) to white (minSat) (lower value).
-                    for (var i = 0; i < noSteps && !CancellationToken.IsCancellationRequested; i++)
-                    {
-                        await UpdateAndWait(colorLights, ambianceLights, sat, ct, timeInterval, CancellationToken);
-                        sat -= satStep;
-                        ct -= ctStep;
+                        // Start at minSat, i.e. white, and go towards maxSat, i.e. red (higher value).
+                        // For ambiance lights, we go from minCt, i.e. cold, to maxCt, i.e. warm (higher value).
+                        for (var i = 0; i < noSteps && !CancellationToken.IsCancellationRequested; i++)
+                        {
+                            await UpdateAndWait(colorLightIds, ambianceLightIds, sat, ct, timeInterval,
+                                CancellationToken);
+                            sat += satStep;
+                            ct += ctStep;
+                        }
+
+                        // Go the opposite direction, i.e. from red (maxSat) to white (minSat) (lower value).
+                        for (var i = 0; i < noSteps && !CancellationToken.IsCancellationRequested; i++)
+                        {
+                            await UpdateAndWait(colorLightIds, ambianceLightIds, sat, ct, timeInterval,
+                                CancellationToken);
+                            sat -= satStep;
+                            ct -= ctStep;
+                        }
                     }
+                    // Here's where we end up if the check CancellationToken.IsCancellationRequested returns true (less likely).
+                    await RestoreOriginalValues(colorLights, ambianceLights);
                 }
-
-                await SwitchOff(colorLights);
-                await SwitchOff(ambianceLights);
-            }
-            catch (TaskCanceledException)
-            {
-                _logger.LogInformation("Canceled.");
+                catch (TaskCanceledException)
+                {
+                    _logger.LogInformation("Canceled. Restoring original values.");
+                    // Here's where we end up if cancellation is requested during Task.Delay() in UpdateAndWait() (more likely).
+                    await RestoreOriginalValues(colorLights, ambianceLights);
+                }
             }
             catch (Exception ex)
             {
@@ -83,7 +90,19 @@ namespace HueEffects.Web.EffectHandlers
             }
         }
 
-		private async Task UpdateAndWait(IReadOnlyCollection<string> colorLights, IReadOnlyCollection<string> ambianceLights, float sat, float ct, float timeInterval, CancellationToken cancellationToken)
+        private async Task RestoreOriginalValues(IEnumerable<Light> colorLights, IEnumerable<Light> ambianceLights)
+        {
+            var colorTasks = colorLights.Select(light => HueClient.SendCommandAsync(new LightCommand
+                    {On = light.State.On, ColorCoordinates = light.State.ColorCoordinates, Hue = light.State.Hue},
+                new[] {light.Id}));
+            var ambianceTasks = ambianceLights.Select(light => HueClient.SendCommandAsync(new LightCommand
+                    {On = light.State.On, ColorTemperature = light.State.ColorTemperature},
+                new[] {light.Id}));
+            var tasks = Enumerable.Union(colorTasks, ambianceTasks).ToList();
+            await Task.WhenAll(tasks);
+        }
+
+        private async Task UpdateAndWait(IReadOnlyCollection<string> colorLights, IReadOnlyCollection<string> ambianceLights, float sat, float ct, float timeInterval, CancellationToken cancellationToken)
 		{
 			var startTime = DateTime.Now;
 

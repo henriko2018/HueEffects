@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -39,31 +40,25 @@ namespace HueEffects.Web.EffectHandlers
 			await HueClient.SendCommandAsync(command, lightIds);
 		}
 
-		protected async Task SwitchOff(List<string> lightIds)
+		protected async Task SwitchOff(IReadOnlyCollection<string> lightIds)
 		{
 			_logger.LogDebug("Switching off light(s) {lights}...", string.Join(',', lightIds));
 			var command = new LightCommand { On = false };
 			await HueClient.SendCommandAsync(command, lightIds);
 		}
 
-		protected async Task UpdateColorTemp(int ct, IReadOnlyCollection<string> lightIds)
+        protected async Task UpdateColorTemp(int ct, IReadOnlyCollection<string> lightIds)
         {
-            _logger.LogDebug("Setting color temp to {ct} for lights {lights}...", ct, string.Join(',', lightIds));
+            _logger.LogDebug("Setting color temp to {ct} for light(s) {lights}...", ct, string.Join(',', lightIds));
             var command = new LightCommand { ColorTemperature = ct};
             await HueClient.SendCommandAsync(command, lightIds);
         }
 
-        protected async Task<List<string>> GetLightsWithCapability(string groupId, Func<LightCapabilities, bool> condition)
+        protected async Task<Light[]> GetLights(string groupId)
         {
-            var lights = new List<string>();
             var group = await HueClient.GetGroupAsync(groupId);
-            foreach (var lightId in @group.Lights)
-            {
-                var light = await HueClient.GetLightAsync(lightId);
-                if (condition(light.Capabilities))
-                    lights.Add(light.Id);
-            }
-
+            var tasks = group.Lights.Select(id => HueClient.GetLightAsync(id));
+            var lights = await Task.WhenAll(tasks);
             return lights;
         }
     }
