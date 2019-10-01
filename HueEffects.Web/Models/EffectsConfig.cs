@@ -91,9 +91,8 @@ namespace HueEffects.Web.Models
         {
             // Default values
             Type = TimeType.Sun;
-            //Type = TimeType.Fixed;
-            RandomInterval = 30;
-            TransitionTime = TimeSpan.FromHours(2);
+            RandomInterval = 0;
+            TransitionTime = TimeSpan.FromHours(1);
         }
 
         public TimeType Type { get; set; }
@@ -122,7 +121,7 @@ namespace HueEffects.Web.Models
 
         protected static (DateTime sunSet, DateTime sunRise) GetSunPhases()
         {
-            var sunPhases = SunCalc.GetSunPhases(DateTime.Now, 59.4664329, 18.0842061).ToList();
+            var sunPhases = SunCalc.GetSunPhases(DateTime.Now, 59.4664329, 18.0842061).ToList(); // TODO: Remove hard-coding
             var sunSet = sunPhases.Single(sp => sp.Name.Value == SunPhaseName.Sunset.Value).PhaseTime.ToLocalTime();
             var sunRise = sunPhases.Single(sp => sp.Name.Value == SunPhaseName.Sunrise.Value).PhaseTime.ToLocalTime();
             return (sunSet, sunRise);

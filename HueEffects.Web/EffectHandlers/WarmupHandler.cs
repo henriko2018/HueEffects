@@ -1,45 +1,55 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
+using System.Linq;
 using System.Timers;
 using System.Threading.Tasks;
 using HueEffects.Web.Models;
 using Microsoft.Extensions.Logging;
-using Q42.HueApi;
 using Q42.HueApi.Interfaces;
-using Timer = System.Timers.Timer;
 
 namespace HueEffects.Web.EffectHandlers
 {
-    public class WarmupHandler : EffectHandler
+    public class WarmupHandler : EffectHandler, IDisposable
     {
         private readonly WarmupEffectConfig _config;
-        private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<WarmupHandler> _logger;
-        private readonly List<Timer> _timers = new List<Timer>();
-        private readonly Random _random = new Random();
+        private readonly List<Timer> _timers = new List<Timer>(); // Timers must be referenced so that they are not garbage collected.
         private List<string> _lightIds;
 
         public WarmupHandler(WarmupEffectConfig config, ILoggerFactory loggerFactory, ILocalHueClient hueClient) : base(hueClient, loggerFactory)
         {
             _config = config;
-            _loggerFactory = loggerFactory;
             _logger = loggerFactory.CreateLogger<WarmupHandler>();
         }
 
         protected override async Task DoWork()
         {
-            _lightIds = await GetLightsWithCapability(_config.LightGroup, capabilities => capabilities.Control.ColorTemperature != null);
-            AddTurnOnTimer();
-            AddTurnOffTimer();
+			try
+            {
+                _lightIds = (await GetLights(_config.LightGroup))
+                    .Where(light => light.Capabilities.Control.ColorTemperature != null)
+                    .Select(light => light.Id)
+                    .ToList();
+				AddTurnOnTimer();
+				AddTurnOffTimer();
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Exception caught in " + nameof(DoWork));
+			}
+        }
+        
+        public void Dispose()
+        {
+            StopTimers();
         }
 
-        public override void Stop()
+        private void StopTimers()
         {
-            base.Stop();
             foreach (var timer in _timers)
             {
                 timer.Stop();
+                _logger.LogInformation("Timer stopped.");
             }
             _timers.Clear();
         }
@@ -54,23 +64,30 @@ namespace HueEffects.Web.EffectHandlers
             _logger.LogDebug($"On timer will fire at {DateTime.Now.AddMilliseconds(timer.Interval)}.");
         }
 
-        private void OnTimer_Elapsed(object sender, ElapsedEventArgs e)
+        private async void OnTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
-            // Turn on first
-            var command = new LightCommand {On = true, ColorTemperature = _config.UseMinTemp};
-            HueClient.SendCommandAsync(command, _lightIds);
-            // Warm up
-            // Calculate time between each step. We want to go from min to max during configured warm-up.
-            var msDelta = (int) (_config.TurnOnAt.TransitionTime.TotalMilliseconds / (_config.UseMaxTemp - _config.UseMinTemp));
-            for (var temp = _config.UseMinTemp; temp <= _config.UseMaxTemp; temp++)
+            if (CancellationToken.IsCancellationRequested)
             {
-                if (StopFlag) return;
-                Thread.Sleep(msDelta);
-#pragma warning disable 4014
-                UpdateColorTemp(temp, _lightIds);
-#pragma warning restore 4014
+                StopTimers();
+                return;
             }
-        }
+
+            // Turn on first
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+			SwitchOn(_lightIds, _config.UseMinTemp);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+
+			// Warm up
+			// Calculate time between each step. We want to go from min to max during configured warm-up.
+			var msDelta = (int) (_config.TurnOnAt.TransitionTime.TotalMilliseconds / (_config.UseMaxTemp - _config.UseMinTemp));
+            for (var temp = _config.UseMinTemp; temp <= _config.UseMaxTemp && !CancellationToken.IsCancellationRequested; temp++)
+            {
+                await Task.Delay(msDelta, CancellationToken);
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+				UpdateColorTemp(temp, _lightIds);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+			}
+		}
 
         private void AddTurnOffTimer()
         {
@@ -82,23 +99,33 @@ namespace HueEffects.Web.EffectHandlers
             _logger.LogDebug($"Off timer will fire at {DateTime.Now.AddMilliseconds(timer.Interval)}.");
         }
 
-        private void OffTimer_Elapsed(object sender, ElapsedEventArgs e)
+        private async void OffTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
+            if (CancellationToken.IsCancellationRequested)
+            {
+                StopTimers();
+                return;
+            }
+
             // Cool down
             // Calculate time between each step. We want to go from max to min during configured cool-down.
             var msDelta = (int) (_config.TurnOffAt.TransitionTime.TotalMilliseconds / (_config.UseMaxTemp - _config.UseMinTemp));
-            for (var temp = _config.UseMaxTemp; temp >= _config.UseMinTemp; temp--)
+            for (var temp = _config.UseMaxTemp; temp >= _config.UseMinTemp && !CancellationToken.IsCancellationRequested; temp--)
             {
-                if (StopFlag) return;
-                Thread.Sleep(msDelta);
-#pragma warning disable 4014
-                UpdateColorTemp(temp, _lightIds);
-#pragma warning restore 4014
-            }
+                await Task.Delay(msDelta, CancellationToken);
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+				UpdateColorTemp(temp, _lightIds);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+			}
 
-            // Turn off last
-            var command = new LightCommand { On = false };
-            HueClient.SendCommandAsync(command, _lightIds);
-        }
+			// Turn off
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+			SwitchOff(_lightIds);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+
+			// Lastly, schedule new timers
+			AddTurnOnTimer();
+			AddTurnOffTimer();
+		}
     }
 }
