@@ -1,0 +1,1 @@
+docker build -f .\Dockerfile.Windows -t xmas-effect .
