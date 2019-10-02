@@ -57,11 +57,11 @@ namespace HueEffects.Web.EffectHandlers
         private void AddTurnOnTimer()
         {
             var msUntilOn = _config.TurnOnAt.GetUntil(false);
+            _logger.LogDebug($"On timer will fire at {DateTime.Now.AddMilliseconds(msUntilOn)}.");
             var timer = new Timer {AutoReset = false, Interval = msUntilOn };
             timer.Elapsed += OnTimer_Elapsed;
             timer.Start();
             _timers.Add(timer);
-            _logger.LogDebug($"On timer will fire at {DateTime.Now.AddMilliseconds(timer.Interval)}.");
         }
 
         private async void OnTimer_Elapsed(object sender, ElapsedEventArgs e)
@@ -92,11 +92,11 @@ namespace HueEffects.Web.EffectHandlers
         private void AddTurnOffTimer()
         {
             var msUntilEvent = _config.TurnOffAt.GetUntil(true);
+            _logger.LogDebug($"Off timer will fire at {DateTime.Now.AddMilliseconds(msUntilEvent)}.");
             var timer = new Timer {AutoReset = false, Interval = msUntilEvent};
             timer.Elapsed += OffTimer_Elapsed;
             timer.Start();
             _timers.Add(timer);
-            _logger.LogDebug($"Off timer will fire at {DateTime.Now.AddMilliseconds(timer.Interval)}.");
         }
 
         private async void OffTimer_Elapsed(object sender, ElapsedEventArgs e)
