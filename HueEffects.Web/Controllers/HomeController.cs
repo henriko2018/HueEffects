@@ -6,6 +6,7 @@ using HueEffects.Web.Models;
 using Microsoft.Extensions.Logging;
 using Q42.HueApi.Interfaces;
 using HueEffects.Web.Services;
+using Microsoft.Extensions.Options;
 
 namespace HueEffects.Web.Controllers
 {
@@ -15,13 +16,15 @@ namespace HueEffects.Web.Controllers
         private readonly ILoggerFactory _loggerFactory;
 		private readonly BackgroundService _backgroundService;
 		private readonly StorageService _storageService;
+        private readonly Options _options;
 
-		public HomeController(ILocalHueClient hueClient, ILoggerFactory loggerFactory, Microsoft.Extensions.Hosting.IHostedService backgroundService, StorageService storageService)
+		public HomeController(ILocalHueClient hueClient, ILoggerFactory loggerFactory, Microsoft.Extensions.Hosting.IHostedService backgroundService, StorageService storageService, IOptionsMonitor<Options> optionsAccessor)
         {
             _hueClient = hueClient;
             _loggerFactory = loggerFactory;
 			_backgroundService = (BackgroundService)backgroundService;
 			_storageService = storageService;
+            _options = optionsAccessor.CurrentValue;
         }
 
         #region Http action methods
@@ -31,13 +34,16 @@ namespace HueEffects.Web.Controllers
             var model = new EffectsConfig
             {
                 LightGroups = await _hueClient.GetGroupsAsync(),
+                SunPhases = TimeConfig.GetSunPhases(_options.Location),
                 XmasEffectConfig = await _storageService.LoadConfig<XmasEffectConfig>(),
                 WarmupEffectConfig = await _storageService.LoadConfig<WarmupEffectConfig>()
             };
             model.XmasEffectConfig.Active = _backgroundService.ActiveHandler != null && _backgroundService.ActiveHandler.GetType() == typeof(XmasHandler);
             model.WarmupEffectConfig.Active = _backgroundService.ActiveHandler != null && _backgroundService.ActiveHandler.GetType() == typeof(WarmupHandler);
+            model.WarmupEffectConfig.TurnOnAt.Location = _options.Location; // TODO: It would be nice to have this injected into TimeConfig
+            model.WarmupEffectConfig.TurnOffAt.Location = _options.Location;
 
-            return View(model);
+			return View(model);
         }
 
         [HttpPost]
@@ -58,7 +64,9 @@ namespace HueEffects.Web.Controllers
         {
 			if (ModelState.IsValid)
 			{
-				await _backgroundService.StartEffect(config.WarmupEffectConfig, new WarmupHandler(config.WarmupEffectConfig, _loggerFactory, _hueClient));
+                config.WarmupEffectConfig.TurnOnAt.Location = _options.Location; // TODO: It would be nice to have this injected into TimeConfig
+                config.WarmupEffectConfig.TurnOffAt.Location = _options.Location;
+                await _backgroundService.StartEffect(config.WarmupEffectConfig, new WarmupHandler(config.WarmupEffectConfig, _loggerFactory, _hueClient));
 				return RedirectToAction("Index");
 			}
             return View("Index", config);

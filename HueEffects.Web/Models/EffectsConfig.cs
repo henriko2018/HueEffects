@@ -13,12 +13,11 @@ namespace HueEffects.Web.Models
         public XmasEffectConfig XmasEffectConfig { get; set; }
         public WarmupEffectConfig WarmupEffectConfig { get; set; }
         public IEnumerable<Group> LightGroups { get; set; }
+        public IEnumerable<SunPhase> SunPhases { get; set; }
     }
 
     public interface IEffectConfig
     {
-        bool Active { get; set; }
-        string LightGroup { get; set; }
     }
 
     public class XmasEffectConfig : IEffectConfig
@@ -65,26 +64,6 @@ namespace HueEffects.Web.Models
         public int UseMaxTemp { get; set; }
     }
 
-    public class SunRiseConfig : TimeConfig
-    {
-        public SunRiseConfig()
-        {
-            // Default values
-            FixedTime = DateTime.Today + new TimeSpan(0, 6, 0, 0);
-            SunTime = GetSunPhases().sunRise;
-        }
-    }
-
-    public class SunSetConfig : TimeConfig
-    {
-        public SunSetConfig()
-        {
-            // Default values
-            FixedTime = DateTime.Today + new TimeSpan(0, 21, 0, 0);
-            SunTime = GetSunPhases().sunSet;
-        }
-    }
-
     public class TimeConfig
     {
         public TimeConfig()
@@ -95,13 +74,9 @@ namespace HueEffects.Web.Models
             TransitionTime = TimeSpan.FromHours(1);
         }
 
-        public TimeType Type { get; set; }
+        public TimeType Type { get; set; } // Fixed or sun
 
-        /// <summary>
-        /// Read-only. Only the time portion is used.
-        /// </summary>
-        [DataType(DataType.Time)]
-        public DateTime SunTime { get; set; }
+        public SunPhaseName SunPhaseName { get; set; }
 
         /// <summary>
         /// Only the time portion is used.
@@ -119,21 +94,35 @@ namespace HueEffects.Web.Models
         /// </summary>
         public TimeSpan TransitionTime { get; set; }
 
-        protected static (DateTime sunSet, DateTime sunRise) GetSunPhases()
+        public Location Location { get; set; }
+
+        private SunPhase SunPhase
         {
-            var sunPhases = SunCalc.GetSunPhases(DateTime.Now, 59.4664329, 18.0842061).ToList(); // TODO: Remove hard-coding
-            var sunSet = sunPhases.Single(sp => sp.Name.Value == SunPhaseName.Sunset.Value).PhaseTime.ToLocalTime();
-            var sunRise = sunPhases.Single(sp => sp.Name.Value == SunPhaseName.Sunrise.Value).PhaseTime.ToLocalTime();
-            return (sunSet, sunRise);
+            get
+            {
+                if (Location == null)
+                    throw new ArgumentNullException(nameof(Location), "Location not set when trying to get SunPhase");
+                var sunPhase = GetSunPhases(Location).SingleOrDefault(sp => sp.Name.Value == SunPhaseName.Value);
+                if (SunPhaseName == default(SunPhaseName))
+                    throw new ArgumentOutOfRangeException(nameof(SunPhaseName), $"Unknown sun phase {SunPhaseName}");
+                return sunPhase;
+            }
+        }
+
+        public static IEnumerable<SunPhase> GetSunPhases(Location location)
+        {
+            var sunPhases = SunCalc.GetSunPhases(DateTime.Now, location.Lat, location.Long).ToList();
+            return sunPhases.Select(sp => new SunPhase(sp.Name, sp.PhaseTime.ToLocalTime())).OrderBy(sp => sp.PhaseTime);
         }
 
         private static readonly Random Random = new Random();
+        
         /// <summary>
         /// Returns number of milliseconds until configured time adjusted with random interval. If it has passed, tomorrow's value is used.
         /// </summary>
         public double GetUntil(bool adjustForTransition)
         {
-            var time = Type == TimeType.Fixed ? FixedTime : SunTime;
+            var time = Type == TimeType.Fixed ? FixedTime : SunPhase.PhaseTime;
             if (adjustForTransition)
                 time -= TransitionTime;
             var maxAdjustment = RandomInterval * 60 * 1000; // Now in ms
@@ -145,6 +134,26 @@ namespace HueEffects.Web.Models
         }
 
         public static IEnumerable<TimeType> TimeTypes => Enum.GetValues(typeof(TimeType)).Cast<TimeType>();
+    }
+
+    public class SunRiseConfig : TimeConfig
+    {
+        public SunRiseConfig()
+        {
+            // Default values
+            FixedTime = DateTime.Today + new TimeSpan(0, 6, 0, 0);
+            SunPhaseName = SunPhaseName.Dawn;
+        }
+    }
+
+    public class SunSetConfig : TimeConfig
+    {
+        public SunSetConfig()
+        {
+            // Default values
+            FixedTime = DateTime.Today + new TimeSpan(0, 21, 0, 0);
+            SunPhaseName = SunPhaseName.Dusk;
+        }
     }
 
     public enum TimeType { Fixed, Sun }
