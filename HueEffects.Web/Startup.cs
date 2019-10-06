@@ -32,8 +32,9 @@ namespace HueEffects.Web
             });
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
-            
-            AddPhilipsHueClient(services);
+
+			services.Configure<Options>(Configuration);
+			AddPhilipsHueClient(services);
 			//services.AddHostedService<BackgroundService>(); // Doesn't work - see https://github.com/aspnet/Extensions/issues/553
 			services.AddSingleton<Microsoft.Extensions.Hosting.IHostedService, BackgroundService>();
 			services.AddSingleton<StorageService>();
@@ -48,7 +49,7 @@ namespace HueEffects.Web
             var bridge = bridges.SingleOrDefault();
             if (bridge == null)
                 throw new ApplicationException("Found no Philips Hue Bridge.");
-            var client = new LocalHueClient(bridge.IpAddress, "qcENpxmyTZpc8ZMJmrm4KY9-Sn8VTRHSXbr9JbdH"); // TODO: Store somewhere else
+            var client = new LocalHueClient(bridge.IpAddress, Configuration["appKey"]); // Set an environment variable or in launchSettings.json.
             services.AddSingleton<ILocalHueClient>(client);
         }
 
