@@ -48,8 +48,8 @@ namespace HueEffects.Web.Models
         {
             // Default values
             Active = false;
-            TurnOnAt = new SunSetConfig();
-            TurnOffAt = new SunRiseConfig();
+            TurnOnAt = new SunsetConfig();
+            TurnOffAt = new SunriseConfig();
             UseMinTemp = MinTemp;
             UseMaxTemp = MaxTemp;
         }
@@ -136,23 +136,23 @@ namespace HueEffects.Web.Models
         public static IEnumerable<TimeType> TimeTypes => Enum.GetValues(typeof(TimeType)).Cast<TimeType>();
     }
 
-    public class SunRiseConfig : TimeConfig
+    public class SunriseConfig : TimeConfig
     {
-        public SunRiseConfig()
+        public SunriseConfig()
         {
             // Default values
             FixedTime = DateTime.Today + new TimeSpan(0, 6, 0, 0);
-            SunPhaseName = SunPhaseName.Dawn;
+            SunPhaseName = SunPhaseName.Sunrise;
         }
     }
 
-    public class SunSetConfig : TimeConfig
+    public class SunsetConfig : TimeConfig
     {
-        public SunSetConfig()
+        public SunsetConfig()
         {
             // Default values
             FixedTime = DateTime.Today + new TimeSpan(0, 21, 0, 0);
-            SunPhaseName = SunPhaseName.Dusk;
+            SunPhaseName = SunPhaseName.Sunset;
         }
     }
 
