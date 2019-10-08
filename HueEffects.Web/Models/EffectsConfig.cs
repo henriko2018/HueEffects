@@ -76,7 +76,7 @@ namespace HueEffects.Web.Models
 
         public TimeType Type { get; set; } // Fixed or sun
 
-        public SunPhaseName SunPhaseName { get; set; }
+        public string SunPhaseName { get; set; }
 
         /// <summary>
         /// Only the time portion is used.
@@ -102,8 +102,9 @@ namespace HueEffects.Web.Models
             {
                 if (Location == null)
                     throw new ArgumentNullException(nameof(Location), "Location not set when trying to get SunPhase");
-                var sunPhase = GetSunPhases(Location).SingleOrDefault(sp => sp.Name.Value == SunPhaseName.Value);
-                if (SunPhaseName == default(SunPhaseName))
+                var sunPhase = GetSunPhases(Location).SingleOrDefault(sp => sp.Name.Value == SunPhaseName);
+                // For some reason, sunPhase == default(SunPhase) throws System.NullReferenceException.
+                if (sunPhase.Name == null)
                     throw new ArgumentOutOfRangeException(nameof(SunPhaseName), $"Unknown sun phase {SunPhaseName}");
                 return sunPhase;
             }
@@ -142,7 +143,7 @@ namespace HueEffects.Web.Models
         {
             // Default values
             FixedTime = DateTime.Today + new TimeSpan(0, 6, 0, 0);
-            SunPhaseName = SunPhaseName.Sunrise;
+            SunPhaseName = SunCalcNet.Model.SunPhaseName.Sunrise.Value;
         }
     }
 
@@ -152,7 +153,7 @@ namespace HueEffects.Web.Models
         {
             // Default values
             FixedTime = DateTime.Today + new TimeSpan(0, 21, 0, 0);
-            SunPhaseName = SunPhaseName.Sunset;
+            SunPhaseName = SunCalcNet.Model.SunPhaseName.Sunset.Value;
         }
     }
 
