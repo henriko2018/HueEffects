@@ -45,14 +45,14 @@ namespace XmasEffect
             }
             var colorLights = lights.Where(light => light.Capabilities.Control.ColorGamut != null).ToList();
             var ambianceLights = lights.Where(light => light.Capabilities.Control.Ct != null).Except(colorLights).ToList();
-            Console.Out.WriteLine($"Color lights: {string.Join(',', colorLights.Select(l => l.Id))}");
-            Console.Out.WriteLine($"Ambiance lights: {string.Join(',', ambianceLights.Select(l => l.Id))}");
+            Console.Out.WriteLine($"Color light(s): {string.Join(',', colorLights.Select(l => l.Id))}");
+            Console.Out.WriteLine($"Ambiance light(s): {string.Join(',', ambianceLights.Select(l => l.Id))}");
             return (colorLights, ambianceLights);
         }
 
         private async Task InitLights((List<Light> colorLights, List<Light> ambianceLights) capableLights)
         {
-            Console.Out.WriteLine($"Turning on color light(s) {string.Join(',', capableLights.colorLights)} and ambiance light(s) {string.Join(',', capableLights.ambianceLights)}");
+            Console.Out.WriteLine("Turning on light(s)...");
             foreach (var colorLight in capableLights.colorLights)
                 await _hueClient.SetLightState(colorLight.Id, new State {On = true, Xy = new[] { 0.675f, 0.322f } }); // Red
             foreach (var ambianceLight in capableLights.ambianceLights)
@@ -78,24 +78,27 @@ namespace XmasEffect
 
             try
             {
-                var sat = minSat;
-                var ct = minCt;
-
-                // Start at minSat, i.e. white, and go towards maxSat, i.e. red (higher value).
-                // For ambiance lights, we go from minCt, i.e. cold, to maxCt, i.e. warm (higher value).
-                for (var i = 0; i < noSteps; i++)
+                while (true)
                 {
-                    await UpdateAndWait(capableLights, sat, ct, timeInterval, cancellationToken);
-                    sat += satStep;
-                    ct += ctStep;
-                }
+                    var sat = minSat;
+                    var ct = minCt;
 
-                // Go the opposite direction, i.e. from red (maxSat) to white (minSat) (lower value).
-                for (var i = 0; i < noSteps; i++)
-                {
-                    await UpdateAndWait(capableLights, sat, ct, timeInterval, cancellationToken);
-                    sat -= satStep;
-                    ct -= ctStep;
+                    // Start at minSat, i.e. white, and go towards maxSat, i.e. red (higher value).
+                    // For ambiance lights, we go from minCt, i.e. cold, to maxCt, i.e. warm (higher value).
+                    for (var i = 0; i < noSteps; i++)
+                    {
+                        await UpdateAndWait(capableLights, sat, ct, timeInterval, cancellationToken);
+                        sat += satStep;
+                        ct += ctStep;
+                    }
+
+                    // Go the opposite direction, i.e. from red (maxSat) to white (minSat) (lower value).
+                    for (var i = 0; i < noSteps; i++)
+                    {
+                        await UpdateAndWait(capableLights, sat, ct, timeInterval, cancellationToken);
+                        sat -= satStep;
+                        ct -= ctStep;
+                    }
                 }
             }
             catch (TaskCanceledException)
@@ -114,9 +117,9 @@ namespace XmasEffect
             // If it fails, it will probably work next time.
 #pragma warning disable 4014
             foreach (var light in capableLights.colorLights)
-                _hueClient.SetLightState(light.Id, new State {Sat = (int)sat});
+                _hueClient.SetLightState(light.Id, new {sat = (int)sat});
             foreach (var light in capableLights.ambianceLights)
-                _hueClient.SetLightState(light.Id, new State {Ct = (int)ct});
+                _hueClient.SetLightState(light.Id, new {ct = (int)ct});
 #pragma warning restore 4014
 
             var timeToWait = startTime.AddSeconds(timeInterval) - DateTime.Now;
@@ -126,9 +129,9 @@ namespace XmasEffect
         private async Task RestoreOriginalValues((List<Light> colorLights, List<Light> ambianceLights) capableLights)
         {
             foreach (var light in capableLights.colorLights)
-                await _hueClient.SetLightState(light.Id, new State {On = light.State.On, Xy = light.State.Xy});
+                await _hueClient.SetLightState(light.Id, new {light.State.On, light.State.Xy});
             foreach (var light in capableLights.ambianceLights)
-                await _hueClient.SetLightState(light.Id, new State {On = light.State.On, Ct = light.State.Ct});
+                await _hueClient.SetLightState(light.Id, new {light.State.On, light.State.Ct});
         }
     }
 }

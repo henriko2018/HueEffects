@@ -1,27 +1,23 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using CommandLine;
 
 namespace XmasEffect
 {
     internal static class Program
     {
-        private static readonly CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
-
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
-            Parser.Default.ParseArguments<Options>(args)
-                .WithParsed(options =>
+            await Parser.Default.ParseArguments<Options>(args).MapResult(
+                async options =>
                 {
-                    Console.CancelKeyPress += CancelKeyPressed;
+                    var cancellationTokenSource = new CancellationTokenSource();
+                    Console.CancelKeyPress += (sender, eventArgs) => cancellationTokenSource.Cancel();
                     var effect = new XmasEffect(options);
-                    effect.Start(CancellationTokenSource.Token).GetAwaiter().GetResult(); // Ugly way to wait for completion since there is no WithParsedAsync.
-                });
-        }
-
-        private static void CancelKeyPressed(object sender, ConsoleCancelEventArgs e)
-        {
-            CancellationTokenSource.Cancel();
+                    await effect.Start(cancellationTokenSource.Token);
+                },
+                errors => Task.CompletedTask);
         }
     }
 
