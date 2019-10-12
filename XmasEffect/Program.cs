@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
 
@@ -12,10 +11,14 @@ namespace XmasEffect
             await Parser.Default.ParseArguments<Options>(args).MapResult(
                 async options =>
                 {
-                    var cancellationTokenSource = new CancellationTokenSource();
-                    Console.CancelKeyPress += (sender, eventArgs) => cancellationTokenSource.Cancel();
                     var effect = new XmasEffect(options);
-                    await effect.Start(cancellationTokenSource.Token);
+                    Console.CancelKeyPress += (_, eventArgs) =>
+                    {
+                        Console.Out.WriteLine("Ctrl-C");
+                        eventArgs.Cancel = true;
+                        effect.Continue = false;
+                    };
+                    await effect.Start();
                 },
                 errors => Task.CompletedTask);
         }
@@ -27,7 +30,7 @@ namespace XmasEffect
         [Option('u', "user", Required = true, HelpText = "User (hexadecimal string) created with POST /api")]
         public string User { get; set; }
 
-        [Option('g', "light-group", Required = false, Default = "", HelpText = "Name of the light group to control. If omitted, the special group containing all lights is used.")]
+        [Option('g', "light-group", Required = false, Default = "0", HelpText = "Name of the light group to control. If omitted, the special group containing all lights is used.")]
         public string LightGroup { get; set; }
 
         /// <summary>

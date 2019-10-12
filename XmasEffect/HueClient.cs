@@ -51,7 +51,10 @@ namespace XmasEffect
         {
             var response = await _httpClient.GetStringAsync(await GetApiUri($"groups/{lightGroupId}"));
             var jsonDoc = JsonDocument.Parse(response);
-            return Map(lightGroupId, jsonDoc.RootElement);
+            if (jsonDoc.RootElement.ValueKind == JsonValueKind.Object)
+                return Map(lightGroupId, jsonDoc.RootElement);
+            else
+                throw new ApplicationException("Could not parse get group response: " + response);
         }
 
         internal async Task<Light> GetLight(string lightId)

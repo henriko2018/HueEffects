@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace XmasEffect
 {
     internal class XmasEffect
     {
+        public bool Continue { get; set; } = true;
         private readonly HueClient _hueClient;
         private readonly Options _options;
 
@@ -17,21 +17,23 @@ namespace XmasEffect
             _hueClient = new HueClient(options.User);    
         }
 
-        internal async Task Start(CancellationToken cancellationToken)
+        internal async Task Start()
         {
             LightGroup lightGroup;
-            if (_options.LightGroup == "") // Group name not specified - use special group 0 that contains all lights.
-                lightGroup = await _hueClient.GetLightGroup("0");
+            // Check if a number was specified. In that case assume it is an ID, otherwise a name.
+            if (int.TryParse(_options.LightGroup, out _))
+                lightGroup = await _hueClient.GetLightGroup(_options.LightGroup);
             else
             {
                 var lightGroups = (await _hueClient.GetLightGroups()).ToList();
                 lightGroup = lightGroups.SingleOrDefault(lg => lg.Name == _options.LightGroup);
                 if (lightGroup == default(LightGroup))
-                    throw new ApplicationException($"Group {_options.LightGroup} not found. Available groups: {string.Join(", ", lightGroups)}");
+                    throw new ApplicationException($"Group {_options.LightGroup} not found. Available groups: {string.Join(", ", lightGroups.Select(lg => lg.Name))}");
             }
+            Console.Out.WriteLine($"Using light group {lightGroup.Id} ({lightGroup.Name}).");
             var capableLights = await GetCapableLights(lightGroup);
             await InitLights(capableLights);
-            await RunEffect(capableLights, cancellationToken);
+            await RunEffect(capableLights);
         }
 
         private async Task<(List<Light> colorLights, List<Light> ambianceLights)> GetCapableLights(LightGroup lightGroup)
@@ -59,7 +61,7 @@ namespace XmasEffect
                 await _hueClient.SetLightState(ambianceLight.Id, new State {On = true});
         }
 
-        private async Task RunEffect((List<Light> colorLights, List<Light> ambianceLights) capableLights, CancellationToken cancellationToken)
+        private async Task RunEffect((List<Light> colorLights, List<Light> ambianceLights) capableLights)
         {
             Console.Out.WriteLine("Running effect...");
 
@@ -76,40 +78,34 @@ namespace XmasEffect
             var satStep = (maxSat - minSat) / noSteps;
             var ctStep = (maxCt - minCt) / noSteps;
 
-            try
+            while (Continue)
             {
-                while (true)
+                var sat = minSat;
+                var ct = minCt;
+
+                // Start at minSat, i.e. white, and go towards maxSat, i.e. red (higher value).
+                // For ambiance lights, we go from minCt, i.e. cold, to maxCt, i.e. warm (higher value).
+                for (var i = 0; i < noSteps && Continue; i++)
                 {
-                    var sat = minSat;
-                    var ct = minCt;
+                    await UpdateAndWait(capableLights, sat, ct, timeInterval);
+                    sat += satStep;
+                    ct += ctStep;
+                }
 
-                    // Start at minSat, i.e. white, and go towards maxSat, i.e. red (higher value).
-                    // For ambiance lights, we go from minCt, i.e. cold, to maxCt, i.e. warm (higher value).
-                    for (var i = 0; i < noSteps; i++)
-                    {
-                        await UpdateAndWait(capableLights, sat, ct, timeInterval, cancellationToken);
-                        sat += satStep;
-                        ct += ctStep;
-                    }
-
-                    // Go the opposite direction, i.e. from red (maxSat) to white (minSat) (lower value).
-                    for (var i = 0; i < noSteps; i++)
-                    {
-                        await UpdateAndWait(capableLights, sat, ct, timeInterval, cancellationToken);
-                        sat -= satStep;
-                        ct -= ctStep;
-                    }
+                // Go the opposite direction, i.e. from red (maxSat) to white (minSat) (lower value).
+                for (var i = 0; i < noSteps && Continue; i++)
+                {
+                    await UpdateAndWait(capableLights, sat, ct, timeInterval);
+                    sat -= satStep;
+                    ct -= ctStep;
                 }
             }
-            catch (TaskCanceledException)
-            {
-                // Here's where we end up if cancellation is requested during Task.Delay() in UpdateAndWait().
-                Console.Out.WriteLine("Canceled. Restoring original values.");
-                await RestoreOriginalValues(capableLights);
-            }
+            
+            Console.Out.WriteLine("Canceled. Restoring original values.");
+            await RestoreOriginalValues(capableLights);
         }
 
-        private async Task UpdateAndWait((List<Light> colorLights, List<Light> ambianceLights) capableLights, float sat, float ct, float timeInterval, CancellationToken cancellationToken)
+        private async Task UpdateAndWait((List<Light> colorLights, List<Light> ambianceLights) capableLights, float sat, float ct, float timeInterval)
         {
             var startTime = DateTime.Now;
 
@@ -123,7 +119,7 @@ namespace XmasEffect
 #pragma warning restore 4014
 
             var timeToWait = startTime.AddSeconds(timeInterval) - DateTime.Now;
-            await Task.Delay(timeToWait, cancellationToken);
+            await Task.Delay(timeToWait);
         }
 
         private async Task RestoreOriginalValues((List<Light> colorLights, List<Light> ambianceLights) capableLights)
