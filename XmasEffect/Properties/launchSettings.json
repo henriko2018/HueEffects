@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "HueEffects.Console": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker"
+    }
+  }
+}
