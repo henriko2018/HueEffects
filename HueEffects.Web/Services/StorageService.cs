@@ -7,14 +7,14 @@ namespace HueEffects.Web.Services
 {
 	public class StorageService
 	{
-		private readonly IHostingEnvironment _environment;
+		private readonly IWebHostEnvironment _environment;
 
-		public StorageService(IHostingEnvironment hostingEnvironment)
+		public StorageService(IWebHostEnvironment hostingEnvironment)
 		{
 			_environment = hostingEnvironment;
 		}
 
-		public async Task SaveConfig<TConfig>(TConfig config) => await File.WriteAllTextAsync(GetPath<TConfig>(), JsonConvert.SerializeObject(config));
+		public async Task SaveConfig<TConfig>(TConfig config) => await File.WriteAllTextAsync(GetPath<TConfig>(), JsonConvert.SerializeObject(config, Formatting.Indented));
 
 		public async Task<TConfig> LoadConfig<TConfig>() where TConfig : new()
 		{
