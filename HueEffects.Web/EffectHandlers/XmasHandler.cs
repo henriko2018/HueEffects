@@ -15,6 +15,7 @@ namespace HueEffects.Web.EffectHandlers
         private readonly XmasEffectConfig _configuration;
         private readonly ILogger<XmasHandler> _logger;
 
+
         public XmasHandler(XmasEffectConfig configuration, ILoggerFactory loggerFactory, ILocalHueClient hueClient)  : base(hueClient, loggerFactory)
         {
             _configuration = configuration;

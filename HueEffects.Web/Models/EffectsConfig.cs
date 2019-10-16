@@ -16,11 +16,12 @@ namespace HueEffects.Web.Models
         public IEnumerable<SunPhase> SunPhases { get; set; }
     }
 
-    public interface IEffectConfig
+    public abstract class EffectConfig
     {
+        public bool Active { get; set; }
     }
 
-    public class XmasEffectConfig : IEffectConfig
+    public class XmasEffectConfig : EffectConfig
     {
         public XmasEffectConfig()
         {
@@ -29,7 +30,6 @@ namespace HueEffects.Web.Models
             CycleLength = 60;
         }
 
-        public bool Active { get; set; }
         public string LightGroup { get; set; }
 
         /// <summary>
@@ -39,7 +39,7 @@ namespace HueEffects.Web.Models
         public int CycleLength { get; set; }
     }
 
-    public class WarmupEffectConfig : IEffectConfig
+    public class WarmupEffectConfig : EffectConfig
     {
         public const int MinTemp = 153;
         public const int MaxTemp = 454;
@@ -54,7 +54,6 @@ namespace HueEffects.Web.Models
             UseMaxTemp = MaxTemp;
         }
 
-        public bool Active { get; set; }
         public string LightGroup { get; set; }
         public TimeConfig TurnOnAt { get; set; }
         public TimeConfig TurnOffAt { get; set; }

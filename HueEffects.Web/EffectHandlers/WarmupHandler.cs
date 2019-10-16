@@ -57,7 +57,7 @@ namespace HueEffects.Web.EffectHandlers
         private void AddTurnOnTimer()
         {
             var msUntilOn = _config.TurnOnAt.GetUntil(false);
-            _logger.LogDebug($"On timer will fire at {DateTime.Now.AddMilliseconds(msUntilOn)}.");
+            _logger.LogInformation($"On timer will fire at {DateTime.Now.AddMilliseconds(msUntilOn)}.");
             var timer = new Timer {AutoReset = false, Interval = msUntilOn };
             timer.Elapsed += OnTimer_Elapsed;
             timer.Start();
@@ -68,6 +68,7 @@ namespace HueEffects.Web.EffectHandlers
         {
             try
             {
+                _logger.LogInformation("On timer elapsed.");
                 // Turn on first
     #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 SwitchOn(_lightIds, _config.UseMinTemp);
@@ -97,7 +98,7 @@ namespace HueEffects.Web.EffectHandlers
         private void AddTurnOffTimer()
         {
             var msUntilEvent = _config.TurnOffAt.GetUntil(true);
-            _logger.LogDebug($"Off timer will fire at {DateTime.Now.AddMilliseconds(msUntilEvent)}.");
+            _logger.LogInformation($"Off timer will fire at {DateTime.Now.AddMilliseconds(msUntilEvent)}.");
             var timer = new Timer {AutoReset = false, Interval = msUntilEvent};
             timer.Elapsed += OffTimer_Elapsed;
             timer.Start();
@@ -108,6 +109,7 @@ namespace HueEffects.Web.EffectHandlers
         {
             try
             {
+                _logger.LogInformation("Off timer elapsed.");
                 // Cool down
                 // Calculate time between each step. We want to go from max to min during configured cool-down.
                 var msDelta = (int) (_config.TurnOffAt.TransitionTime.TotalMilliseconds / (_config.UseMaxTemp - _config.UseMinTemp));
