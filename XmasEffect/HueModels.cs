@@ -11,7 +11,7 @@ namespace XmasEffect
     {
         public string Id { get; set; }
         public string Name { get; set; }
-        public IEnumerable<string> LightIds { get; set; }
+        public IEnumerable<string> Lights { get; set; }
     }
 
     public class Light

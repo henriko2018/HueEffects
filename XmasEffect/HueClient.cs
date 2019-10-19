@@ -37,24 +37,22 @@ namespace XmasEffect
             return bridges.First().InternalIpAddress;
         }
 
-        internal async Task<IEnumerable<LightGroup>> GetLightGroups()
+        internal async Task<IEnumerable<string>> GetLightGroupIds()
         {
             var response = await _httpClient.GetStringAsync(await GetApiUri("groups"));
             // Surprisingly, we don't get an array of groups but an object with properties called "1", "2" and so on.
             // Therefore, we cannot use JsonSerializer.Deserialize. 
             var jsonDoc = JsonDocument.Parse(response);
-            var lightGroups = jsonDoc.RootElement.EnumerateObject().Select(prop => Map(prop.Name, prop.Value));
-            return lightGroups;
+            var lightGroupIds = jsonDoc.RootElement.EnumerateObject().Select(prop => prop.Name);
+            return lightGroupIds;
         }
 
         internal async Task<LightGroup> GetLightGroup(string lightGroupId)
         {
             var response = await _httpClient.GetStringAsync(await GetApiUri($"groups/{lightGroupId}"));
-            var jsonDoc = JsonDocument.Parse(response);
-            if (jsonDoc.RootElement.ValueKind == JsonValueKind.Object)
-                return Map(lightGroupId, jsonDoc.RootElement);
-            else
-                throw new ApplicationException("Could not parse get group response: " + response);
+            var group = JsonSerializer.Deserialize<LightGroup>(response, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            group.Id = lightGroupId;
+            return group;
         }
 
         internal async Task<Light> GetLight(string lightId)
@@ -74,14 +72,6 @@ namespace XmasEffect
                 new StringContent(content, Encoding.UTF8, "application/json"));
             if (!response.IsSuccessStatusCode)
                 throw new ApplicationException($"Failed to set light state. Code: {response.StatusCode}, content:{await response.Content.ReadAsStringAsync()}");
-        }
-
-        private LightGroup Map(string groupId, JsonElement groupValue)
-        {
-            var name = groupValue.GetProperty("name").GetString();
-            var lightArray = groupValue.GetProperty("lights").EnumerateArray();
-            var lightIds = lightArray.Select(l => l.GetString());
-            return new LightGroup { Id = groupId, Name = name, LightIds = lightIds };
         }
     }
 

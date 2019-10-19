@@ -25,7 +25,9 @@ namespace XmasEffect
                 lightGroup = await _hueClient.GetLightGroup(_options.LightGroup);
             else
             {
-                var lightGroups = (await _hueClient.GetLightGroups()).ToList();
+                var lightGroupIds = await _hueClient.GetLightGroupIds();
+                var tasks = lightGroupIds.Select(groupId => _hueClient.GetLightGroup(groupId));
+                var lightGroups = await Task.WhenAll(tasks);
                 lightGroup = lightGroups.SingleOrDefault(lg => lg.Name == _options.LightGroup);
                 if (lightGroup == default(LightGroup))
                     throw new ApplicationException($"Group {_options.LightGroup} not found. Available groups: {string.Join(", ", lightGroups.Select(lg => lg.Name))}");
@@ -39,7 +41,7 @@ namespace XmasEffect
         private async Task<(List<Light> colorLights, List<Light> ambianceLights)> GetCapableLights(LightGroup lightGroup)
         {
             var lights = new List<Light>();
-            foreach (var lightId in lightGroup.LightIds)
+            foreach (var lightId in lightGroup.Lights)
             {
                 var light = await _hueClient.GetLight(lightId);
                 light.Id = lightId;
