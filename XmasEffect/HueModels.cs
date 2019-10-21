@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
-
-namespace XmasEffect
+﻿namespace XmasEffect
 {
+    // Only properties used in this project have been added to these classes.
+    // See https://developers.meethue.com/develop/hue-api/ for full set of properties.
+
     public class Bridge
     {
         public string InternalIpAddress { get; set; }
@@ -11,7 +12,7 @@ namespace XmasEffect
     {
         public string Id { get; set; }
         public string Name { get; set; }
-        public IEnumerable<string> Lights { get; set; }
+        public string[] Lights { get; set; }
     }
 
     public class Light

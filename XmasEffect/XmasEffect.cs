@@ -19,20 +19,8 @@ namespace XmasEffect
 
         internal async Task Start()
         {
-            LightGroup lightGroup;
-            // Check if a number was specified. In that case assume it is an ID, otherwise a name.
-            if (int.TryParse(_options.LightGroup, out _))
-                lightGroup = await _hueClient.GetLightGroup(_options.LightGroup);
-            else
-            {
-                var lightGroupIds = await _hueClient.GetLightGroupIds();
-                var tasks = lightGroupIds.Select(groupId => _hueClient.GetLightGroup(groupId));
-                var lightGroups = await Task.WhenAll(tasks);
-                lightGroup = lightGroups.SingleOrDefault(lg => lg.Name == _options.LightGroup);
-                if (lightGroup == default(LightGroup))
-                    throw new ApplicationException($"Group {_options.LightGroup} not found. Available groups: {string.Join(", ", lightGroups.Select(lg => lg.Name))}");
-            }
-            Console.Out.WriteLine($"Using light group {lightGroup.Id} ({lightGroup.Name}).");
+            // Always use the special group "0", which contains all lights. This can of course be changed.
+            var lightGroup = await _hueClient.GetLightGroup("0");
             var capableLights = await GetCapableLights(lightGroup);
             await InitLights(capableLights);
             await RunEffect(capableLights);

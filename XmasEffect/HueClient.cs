@@ -37,16 +37,6 @@ namespace XmasEffect
             return bridges.First().InternalIpAddress;
         }
 
-        internal async Task<IEnumerable<string>> GetLightGroupIds()
-        {
-            var response = await _httpClient.GetStringAsync(await GetApiUri("groups"));
-            // Surprisingly, we don't get an array of groups but an object with properties called "1", "2" and so on.
-            // Therefore, we cannot use JsonSerializer.Deserialize. 
-            var jsonDoc = JsonDocument.Parse(response);
-            var lightGroupIds = jsonDoc.RootElement.EnumerateObject().Select(prop => prop.Name);
-            return lightGroupIds;
-        }
-
         internal async Task<LightGroup> GetLightGroup(string lightGroupId)
         {
             var response = await _httpClient.GetStringAsync(await GetApiUri($"groups/{lightGroupId}"));
