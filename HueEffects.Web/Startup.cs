@@ -37,10 +37,10 @@ namespace HueEffects.Web
 			AddPhilipsHueClient(services);
 			//services.AddHostedService<BackgroundService>(); // Doesn't work - see https://github.com/aspnet/Extensions/issues/553
 			services.AddSingleton<IHostedService, Services.BackgroundService>();
-			services.AddSingleton<StorageService>();
+			services.AddSingleton<IStorageService, StorageService>();
         }
 
-        private void AddPhilipsHueClient(IServiceCollection services)
+        protected virtual void AddPhilipsHueClient(IServiceCollection services)
         {
             // Find bridge and so on.
             var locator = new HttpBridgeLocator();

@@ -15,10 +15,10 @@ namespace HueEffects.Web.Controllers
         private readonly ILocalHueClient _hueClient;
         private readonly ILoggerFactory _loggerFactory;
 		private readonly BackgroundService _backgroundService;
-		private readonly StorageService _storageService;
+		private readonly IStorageService _storageService;
         private readonly Options _options;
 
-		public HomeController(ILocalHueClient hueClient, ILoggerFactory loggerFactory, Microsoft.Extensions.Hosting.IHostedService backgroundService, StorageService storageService, IOptionsMonitor<Options> optionsAccessor)
+		public HomeController(ILocalHueClient hueClient, ILoggerFactory loggerFactory, Microsoft.Extensions.Hosting.IHostedService backgroundService, IStorageService storageService, IOptionsMonitor<Options> optionsAccessor)
         {
             _hueClient = hueClient;
             _loggerFactory = loggerFactory;

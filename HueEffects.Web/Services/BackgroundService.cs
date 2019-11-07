@@ -11,13 +11,13 @@ namespace HueEffects.Web.Services
     {
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<BackgroundService> _logger;
-		private readonly StorageService _storageService;
+		private readonly IStorageService _storageService;
         private CancellationTokenSource _effectCancellationTokenSource;
         private readonly ILocalHueClient _hueClient;
 
         public EffectHandler ActiveHandler { get; private set; }
 
-		public BackgroundService(ILoggerFactory loggerFactory, StorageService storageService, ILocalHueClient hueClient)
+		public BackgroundService(ILoggerFactory loggerFactory, IStorageService storageService, ILocalHueClient hueClient)
         {
             _loggerFactory = loggerFactory;
             _logger = loggerFactory.CreateLogger<BackgroundService>();

@@ -3,17 +3,8 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
+    <Version>1.0.1</Version>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Content Remove="WarmupEffectConfig.json" />
-    <Content Remove="XmasEffectConfig.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="WarmupEffectConfig.json" />
-    <None Include="XmasEffectConfig.json" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Q42.HueApi" Version="3.11.0" />

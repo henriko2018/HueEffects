@@ -9,7 +9,7 @@ using Q42.HueApi.Interfaces;
 
 namespace HueEffects.Web.EffectHandlers
 {
-    public class WarmupHandler : EffectHandler, IDisposable
+    public sealed class WarmupHandler : EffectHandler, IDisposable
     {
         private readonly WarmupEffectConfig _config;
         private readonly ILogger<WarmupHandler> _logger;
