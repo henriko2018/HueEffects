@@ -1,7 +1,8 @@
 {
   "profiles": {
     "HueEffects.Console": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "-u qcENpxmyTZpc8ZMJmrm4KY9-Sn8VTRHSXbr9JbdH"
     },
     "Docker": {
       "commandName": "Docker"
