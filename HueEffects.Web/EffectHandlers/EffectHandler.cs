@@ -25,9 +25,7 @@ namespace HueEffects.Web.EffectHandlers
         public void Start(CancellationToken cancellationToken)
         {
             CancellationToken = cancellationToken;
-#pragma warning disable 4014
             _thread = new Thread(() => DoWork()) { IsBackground = true, Name = nameof(EffectHandler) };
-#pragma warning restore 4014
             _thread.Start();
         }
 
@@ -60,6 +58,18 @@ namespace HueEffects.Web.EffectHandlers
             var tasks = group.Lights.Select(id => HueClient.GetLightAsync(id));
             var lights = await Task.WhenAll(tasks);
             return lights;
+        }
+
+        protected async void FireAndForget(Task task)
+        {
+            try
+            {
+                await task;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "");
+            }
         }
     }
 }
