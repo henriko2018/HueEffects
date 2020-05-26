@@ -70,7 +70,7 @@ namespace HueEffects.Web.EffectHandlers
             {
                 _logger.LogInformation("On timer elapsed.");
                 // Turn on first
-                await SwitchOn(_lightIds, _config.UseMinTemp);
+                await SwitchOn(_lightIds, _config.UseMinTemp, _config.UseBrightness);
 
                 // Warm up
                 // Calculate time between each step. We want to go from min to max during configured warm-up.

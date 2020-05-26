@@ -31,18 +31,32 @@ namespace HueEffects.Web.EffectHandlers
 
         protected abstract Task DoWork();
 
-		protected async Task SwitchOn(IReadOnlyCollection<string> lightIds, int? colorTemp = null)
+		protected async Task SwitchOn(IReadOnlyCollection<string> lightIds, int? colorTemp = null, byte? brightness = null)
 		{
 			_logger.LogDebug("Switching on light(s) {lights}...", string.Join(',', lightIds));
-			var command = new LightCommand { On = true, ColorTemperature = colorTemp };
+			var command = new LightCommand { On = true, ColorTemperature = colorTemp, Brightness = brightness};
 			await HueClient.SendCommandAsync(command, lightIds);
-		}
+            // Check that they are really switched on
+            foreach (var lightId in lightIds)
+            {
+                var light = await HueClient.GetLightAsync(lightId);
+                if (!light.State.On)
+                    _logger.LogError("Failed to switch on light " + lightId);
+            }
+        }
 
 		protected async Task SwitchOff(IReadOnlyCollection<string> lightIds)
 		{
 			_logger.LogDebug("Switching off light(s) {lights}...", string.Join(',', lightIds));
 			var command = new LightCommand { On = false };
 			await HueClient.SendCommandAsync(command, lightIds);
+            // Check that they are really switched off
+            foreach (var lightId in lightIds)
+            {
+                var light = await HueClient.GetLightAsync(lightId);
+                if (light.State.On)
+                    _logger.LogError("Failed to switch off light " + lightId);
+            }
 		}
 
         protected async Task UpdateColorTemp(int ct, IReadOnlyCollection<string> lightIds)
@@ -68,7 +82,7 @@ namespace HueEffects.Web.EffectHandlers
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "");
+                _logger.LogError(e, "Exception caught in FireAndForget");
             }
         }
     }

@@ -76,8 +76,15 @@
             <label asp-for="WarmupEffectConfig.UseMaxTemp">Högsta temperatur</label>
             <input asp-for="WarmupEffectConfig.UseMaxTemp" class="form-control" min="@WarmupEffectConfig.MinTemp" max="@WarmupEffectConfig.MaxTemp" step="1" />
         </div>
-        <button type="submit" class="btn btn-primary">Aktivera</button>
     </fieldset>
+    <fieldset>
+        <legend>Ljusstyrka</legend>
+        <div class="form-group">
+            <label asp-for="WarmupEffectConfig.UseBrightness">Använd ljusstyrka</label>
+            <input asp-for="WarmupEffectConfig.UseBrightness" class="form-control" min="@WarmupEffectConfig.MinBright" max="@WarmupEffectConfig.MaxBright" step="1" />
+        </div>
+    </fieldset>
+    <button type="submit" class="btn btn-primary">Aktivera</button>
 </form>
 <script>
     function turnOnSelectionChanged(sunType) {

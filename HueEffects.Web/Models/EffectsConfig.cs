@@ -43,6 +43,8 @@ namespace HueEffects.Web.Models
     {
         public const int MinTemp = 153;
         public const int MaxTemp = 454;
+        public const int MinBright = 1;
+        public const int MaxBright = 254;
 
         public WarmupEffectConfig()
         {
@@ -52,6 +54,7 @@ namespace HueEffects.Web.Models
             TurnOffAt = new SunriseConfig();
             UseMinTemp = MinTemp;
             UseMaxTemp = MaxTemp;
+            UseBrightness = MaxBright;
         }
 
         public string LightGroup { get; set; }
@@ -61,6 +64,8 @@ namespace HueEffects.Web.Models
         public int UseMinTemp { get; set; }
         [Range(MinTemp, MaxTemp)]
         public int UseMaxTemp { get; set; }
+        [Range(MinBright, MaxBright)]
+        public byte UseBrightness { get; set; }
     }
 
     public class TimeConfig
