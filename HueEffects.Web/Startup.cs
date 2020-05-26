@@ -35,9 +35,9 @@ namespace HueEffects.Web
 
 			services.Configure<Options>(Configuration);
 			AddPhilipsHueClient(services);
-			//services.AddHostedService<BackgroundService>(); // Doesn't work - see https://github.com/aspnet/Extensions/issues/553
-			services.AddSingleton<IHostedService, Services.BackgroundService>();
-			services.AddSingleton<IStorageService, StorageService>();
+			services.AddHostedService<Services.BackgroundService>(); // Didn't work until 3.0 - see https://github.com/aspnet/Extensions/issues/553. Had to use the following workaround (last comment in post):
+            //services.AddSingleton<IHostedService, Services.BackgroundService>();
+            services.AddSingleton<IStorageService, StorageService>();
         }
 
         protected virtual void AddPhilipsHueClient(IServiceCollection services)

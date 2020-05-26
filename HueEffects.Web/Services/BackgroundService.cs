@@ -9,6 +9,9 @@ namespace HueEffects.Web.Services
 {
 	public class BackgroundService : Microsoft.Extensions.Hosting.BackgroundService
     {
+        // TODO: This should be split into two services, one that extends Microsoft.Extensions.Hosting.BackgroundService dealing with starting and stopping,
+        // and one that contains ActiveHandler, StartEffect, etc.
+
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<BackgroundService> _logger;
 		private readonly IStorageService _storageService;
