@@ -8,13 +8,15 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C18A4B0F-B93D-4CFF-9106-B2E4A3BA7E7D}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		Artikel_Philips_Hue.docx = Artikel_Philips_Hue.docx
+		Artikel_Philips_Hue.md = Artikel_Philips_Hue.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XmasEffect", "XmasEffect\XmasEffect.csproj", "{91411B64-ADAE-451A-A169-8FB138DAB6DB}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HueEffects.Web.IntegrationTests", "HueEffects.Web.IntegrationTests\HueEffects.Web.IntegrationTests.csproj", "{3C42E6A1-F0C8-486F-920D-D303D0F9DCD5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HueEffects.Web.UnitTests", "HueEffects.Web.UnitTests\HueEffects.Web.UnitTests.csproj", "{D1884B33-B648-4DE6-AA8F-F034C5B1096D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HueEffects.Web.UnitTests", "HueEffects.Web.UnitTests\HueEffects.Web.UnitTests.csproj", "{D1884B33-B648-4DE6-AA8F-F034C5B1096D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
